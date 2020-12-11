@@ -2,7 +2,7 @@
 - [1. Hardware Overview](#1-hardware-overview)
 - [2. UART Log](#2-uart-log)
   - [2.1. Supplies](#21-Supplies)
-  - [2.2. Step 1 : UART Port Location](#22-Step-1-UART-Port-Location)
+  - [2.2. Step 1 : UART Port Location](#22-Step-1-:-UART-Port-Location)
   - [2.3. Step 2 : UART Port Soldering](#23-step-2-UART-Port-Soldering)
   - [2.4. Step 3 : USB to TTL Serial Cable Connection](#24-Step-3-USB-to-TTL-Serial-Cable-Connection)
   - [2.5. Step 4 : UART Log](#25-step-4-uart-log)
