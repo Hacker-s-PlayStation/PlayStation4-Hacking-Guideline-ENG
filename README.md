@@ -25,7 +25,7 @@ Chun Sung Park, Se Han Park
 ## Project Leader
 Hong Ryeol Lim, Jeong Min Lee, Ju Sun Lee
 ## Mentee
-Byeong Su Woo(Project Manager), 김경범, 김현식, Seo Ho Jin, Hyun Seok Yun, Ji Hye Lee
+Byeong Su Woo(Project Manager), Kyoung Beom Kim, 김현식, Seo Ho Jin, Hyun Seok Yun, Ji Hye Lee
 
 # Contents
 ## Introduction
