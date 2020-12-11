@@ -1,27 +1,27 @@
 ### Page Contents <!-- omit in toc -->
 - [1. Hardware Overview](#1-hardware-overview)
 - [2. UART Log](#2-uart-log)
-  - [2.1. 준비물](#21-준비물)
-  - [2.2. Step 1 : UART 포트 확인](#22-step-1--uart-포트-확인)
-  - [2.3. Step 2 : UART 포트 납땜](#23-step-2--uart-포트-납땜)
-  - [2.4. Step 3 : USB to TTL Serial Cable 연결](#24-step-3--usb-to-ttl-serial-cable-연결)
-  - [2.5. Step 4 : UART Log 확인](#25-step-4--uart-log-확인)
-  - [2.6. 결과](#26-결과)
-- [3. syscon dump](#3-syscon-dump)
-  - [3.1. 준비물](#31-준비물)
-  - [3.2. Step 1 : syscon 디솔더링](#32-step-1--syscon-디솔더링)
-  - [3.3. Step 2 : syscon과 Teensy 4.0 보드 연결](#33-step-2--syscon과-teensy-40-보드-연결)
-  - [3.4. Step 3 : Teensy4.0 programming](#34-step-3--teensy40-programming)
-  - [3.5. Step 4 : syscon dump](#35-step-4--syscon-dump)
-  - [3.6. dump 결과](#36-dump-결과)
-- [4. sflash dump](#4-sflash-dump)
-  - [4.1. Step 1 : sflash 와 Teensy 2.0 보드 연결](#41-step-1--sflash-와-teensy-20-보드-연결)
-  - [4.2. Step 2 : NORway 환경 구성](#42-step-2--norway-환경-구성)
+  - [2.1. Supplies](#21-Supplies)
+  - [2.2. Step 1 : UART Port Location](#22-Step-1-UART-Port-Location)
+  - [2.3. Step 2 : UART Port Soldering](#23-step-2-UART-Port-Soldering)
+  - [2.4. Step 3 : USB to TTL Serial Cable Connection](#24-Step-3-USB-to-TTL-Serial-Cable-Connection)
+  - [2.5. Step 4 : UART Log](#25-step-4-uart-log)
+  - [2.6. Result](#26-Result)
+- [3. Syscon Dump](#3-syscon-dump)
+  - [3.1. Supplies](#31-Supplies)
+  - [3.2. Step 1 : Syscon Desoldering](#32-step-1--syscon-Desoldering)
+  - [3.3. Step 2 : Connect Syscon with Teensy 4.0 board](#33-step-2--Connect-Syscon-with-Teensy-40-board)
+  - [3.4. Step 3 : Teensy 4.0 programming](#34-step-3--teensy40-programming)
+  - [3.5. Step 4 : Syscon Dump](#35-step-4--syscon-dump)
+  - [3.6. Dump Result](#36-dump-Result)
+- [4. Sflash Dump](#4-sflash-dump)
+  - [4.1. Step 1 : Connect Sflash with Teensy 2.0 board](#41-step-1--Connect-Sflash-with-Teensy-20-board)
+  - [4.2. Step 2 : NORway Environment Setting](#42-step-2--norway-Environment-Setting)
   - [4.3. Step 3 : Teensy Loader](#43-step-3--teensy-loader)
   - [4.4. Step 4 : SPIway - info](#44-step-4--spiway---info)
   - [4.5. Step 5 : SPIway - dump](#45-step-5--spiway---dump)
-  - [4.6. dump 결과](#46-dump-결과)
-  - [4.7. 추가](#47-추가)
+  - [4.6. Dump Result](#46-Dump-Result)
+  - [4.7. Plus](#47-Plus)
 - [5. Reference](#5-reference)
 
 ---
@@ -34,11 +34,11 @@
 
 ## 2. UART Log
 
-### 2.1. 준비물
+### 2.1. Supplies
 - 인두기, 납, JumperWire
 - USB to TTL Serial Cable
 
-### 2.2. Step 1 : UART 포트 확인
+### 2.2. Step 1 : UART Port Location
 
 ![UART](https://user-images.githubusercontent.com/48618245/101594879-bcca8a00-3a35-11eb-925c-f4f1cb90cc11.jpeg)
 
@@ -49,36 +49,36 @@ PS4를 분해하여 메인보드를 보면 위 사진과 같은 곳에 UART 포�
 
 위 사진은 우리가 사용한 SAB-001 보드의 UART 포트이다.
 
-### 2.3. Step 2 : UART 포트 납땜
+### 2.3. UART Port Soldering
 
 <img width="164" alt="UART_납땜" src="https://user-images.githubusercontent.com/48618245/101595305-7f1a3100-3a36-11eb-904c-093f6788bf5e.png">
 
 JumperWire를 위에서 확인한 UART 포트에 납땜해서 연결을 해준다.
 
-### 2.4. Step 3 : USB to TTL Serial Cable 연결
+### 2.4. Step 3 : USB to TTL Serial Cable Connection
 
 ![UART_to_Serial](https://user-images.githubusercontent.com/48618245/101595351-92c59780-3a36-11eb-9aa6-d385ec93f6bc.jpeg)
 
 USB to TTL Serial Cable에 Step 2에서 납땜한 JumperWire를 연결해준다. GND는 GND끼리 연결해주고 UART 포트의 TX는 USB to TTL Serial Cable의 RX에 연결해준다.
 
-### 2.5. Step 4 : UART Log 확인
+### 2.5. Step 4 : UART Log
 <img width="723" alt="UART_Log1" src="https://user-images.githubusercontent.com/48618245/101595832-62322d80-3a37-11eb-97b5-927d3e629647.png">
 <img width="179" alt="UART_Log_Blank" src="https://user-images.githubusercontent.com/48618245/101595863-6f4f1c80-3a37-11eb-9ef2-00663cae257f.png">
 
 소니에서 UART Log를 확인하지 못하도록 공백으로만 출력하도록 해놨다.
 
-### 2.6. 결과
+### 2.6. Result
 UART Log를 보고 싶으면 Jailbreak 해놓은 PS4에서 ps4debug.bin 파일을 bin loader로 올리거나 mira 기능을 이용해 jailbreak를 하면 UART Log가 활성화된 것을 확인할 수 있다. 하지만 이는 하드웨어적으로 연결 안해도 nc를 이용하여 포트 접속만 해도 확인할 수 있으니 하드웨어적인 성과는 없었다. 하드웨어적인 연결로 UART Log를 확인하는 것이 아닌 nc를 사용해 PS4에서 UART Log 활성화된 포트로 접속하는 방법은 Jailbreak 목차에서 확인하면 될 것 같다.
 
 
 ## 3. syscon dump
 
-### 3.1. 준비물
+### 3.1. Supplies
 - 열풍기, 인두기세트(납, solder wick, 플럭스)
 - Jumper Wire, 저항, USB to TTL Serial Cable, pin header, 커패시터
 - Teensy 4.0
 
-### 3.2. Step 1 : syscon 디솔더링
+### 3.2. Step 1 : Syscon Desoldering
 
 ![desoldering](https://user-images.githubusercontent.com/48618245/101596857-3021cb00-3a39-11eb-8ede-48a42172527b.JPG)
 
@@ -93,7 +93,7 @@ syscon dump를 하기 위해서는 우선 syscon 칩을 디솔더링 해야하�
 만약 가지고 있는 열풍기로 디솔더링이 되지 않는다면 무리하게 디솔더링하려고 시도하여 우리처럼 시행착오를 겪지말고 열풍기를 더 좋은 것으로 구입하는 것을 추천한다.
 
 
-### 3.3. Step 2 : syscon과 Teensy 4.0 보드 연결
+### 3.3. Step 2 : Connect Syscon with Teensy 4.0 board
 
 <img width="414" alt="SYSGLITCH wiring diagram by Wildcard" src="https://user-images.githubusercontent.com/48618245/101595983-a6bdc900-3a37-11eb-8e23-2c50a206643a.png">
 
@@ -108,7 +108,7 @@ syscon glitch 하기 위해 Teensy4.0에서 동작하도록 만들어 놓은 hex
 [https://www.pjrc.com/teensy/loader.html](https://www.pjrc.com/teensy/loader.html) - Teensy Loader 프로그램 다운로드 사이트<br>
 [https://github.com/VV1LD/SYSGLITCH/releases/tag/T4-1.0](https://github.com/VV1LD/SYSGLITCH/releases/tag/T4-1.0) - SYSGLITCH_TEENSY4.0.hex 다운로드 사이트
 
-### 3.5. Step 4 : syscon dump
+### 3.5. Step 4 : Syscon Dump
 
 <img width="284" alt="realterm" src="https://user-images.githubusercontent.com/48618245/101596511-8c381f80-3a38-11eb-8fd5-58499a3e25e7.png">
 
@@ -120,7 +120,7 @@ realterm 프로그램을 사용하여 덤프를 뜬다.
 
 [https://sourceforge.net/projects/realterm/](https://sourceforge.net/projects/realterm/) - realterm 다운로드 사이트
 
-### 3.6. dump 결과
+### 3.6. Dump Result
 
 <img width="885" alt="syscon_dump" src="https://user-images.githubusercontent.com/48618245/101596616-c5708f80-3a38-11eb-92d5-e2f0c6ddf6a8.png">
 
@@ -128,9 +128,9 @@ realterm 프로그램을 사용하여 덤프를 뜬다.
 
 만약 덤프가 정상적으로 되지 않고 실패했을 때는 계속 `Not Used`만 반복해서 떴었다.
 
-## 4. sflash dump
+## 4. Sflash Dump
 
-### 4.1. Step 1 : sflash 와 Teensy 2.0 보드 연결
+### 4.1. Step 1 : Connect Sflash with Teensy 2.0 board
 
 <img width="433" alt="sflash_diagram" src="https://user-images.githubusercontent.com/48618245/101597589-3feddf00-3a3a-11eb-9cda-7937a48d611c.png">
 
@@ -146,7 +146,7 @@ realterm 프로그램을 사용하여 덤프를 뜬다.
 
 이렇게 포트 정보가 나타나야 툴을 제대로 돌릴 수 있다.
 
-### 4.2. Step 2 : NORway 환경 구성
+### 4.2. Step 2 : NORway Environment Setting
 
 SPIway라는 툴을 이용하여 덤프를 진행하면 된다. git clone을 해 주면 그 안에 `SPIway.py` 스크립트가 존재한다.
 
@@ -188,14 +188,14 @@ TeensyLoader를 다운로드 받은 뒤 실행해 준다. git clone 받은 폴�
 
 위 명령어를 입력하여 덤프를 수행한다. 한 3~5분 정도 기다리면 덤프가 완료된다.
 
-### 4.6. dump 결과
+### 4.6. Dump Result
 
 ![sflash_dump](https://user-images.githubusercontent.com/48618245/101598102-ff429580-3a3a-11eb-915f-7ae364a14720.png)
 
 
 `SONY COMPUTER ENTERTAINMENT INC` 가 나온다면 정상적으로 덤프가 완료된 것이다.
 
-### 4.7. 추가
+### 4.7. Plus
 
 ```
 -SPIway.py
