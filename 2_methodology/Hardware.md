@@ -38,7 +38,7 @@
 - 인두기, 납, JumperWire
 - USB to TTL Serial Cable
 
-### 2.2. Step 1 : UART Port Location
+### 2.2. Step 1 - UART Port Location
 
 ![UART](https://user-images.githubusercontent.com/48618245/101594879-bcca8a00-3a35-11eb-925c-f4f1cb90cc11.jpeg)
 
