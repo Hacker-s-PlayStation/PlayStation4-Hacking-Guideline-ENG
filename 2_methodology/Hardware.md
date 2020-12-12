@@ -48,8 +48,10 @@ we tried dumping sflash which has Aeolia firmware update package. Moreover, we c
 
 ### 2.2. Step 1 - UART Port Location
 
+<img width="433" alt="UART" src="https://user-images.githubusercontent.com/48618245/101594879-bcca8a00-3a35-11eb-925c-f4f1cb90cc11.jpeg">
+<!--
 ![UART](https://user-images.githubusercontent.com/48618245/101594879-bcca8a00-3a35-11eb-925c-f4f1cb90cc11.jpeg)
-
+-->
 <!--
 PS4를 분해하여 메인보드를 보면 위 사진과 같은 곳에 UART 포트가 있다.
 -->
@@ -76,8 +78,10 @@ Connect the UART ports with jumperwire.
 
 ### 2.4. Step 3 - USB to TTL Serial Cable Connection
 
+<img width="600" alt="UART_to_Serial" src="https://user-images.githubusercontent.com/48618245/101595351-92c59780-3a36-11eb-9aa6-d385ec93f6bc.jpeg">
+<!--
 ![UART_to_Serial](https://user-images.githubusercontent.com/48618245/101595351-92c59780-3a36-11eb-9aa6-d385ec93f6bc.jpeg)
-
+-->
 <!--
 USB to TTL Serial Cable에 Step 2에서 납땜한 JumperWire를 연결해준다. GND는 GND끼리 연결해주고 UART 포트의 TX는 USB to TTL Serial Cable의 RX에 연결해준다.
 -->
@@ -110,8 +114,10 @@ If you want to see the log, you have to jailbreak first using Mira. However, we 
 
 ### 3.2. Step 1 - Syscon Desoldering
 
+<img width="600" alt="desoldering" src="https://user-images.githubusercontent.com/48618245/101596857-3021cb00-3a39-11eb-8ede-48a42172527b.JPG">
+<!--
 ![desoldering](https://user-images.githubusercontent.com/48618245/101596857-3021cb00-3a39-11eb-8ede-48a42172527b.JPG)
-
+-->
 <!--
 syscon dump를 하기 위해서는 우선 syscon 칩을 디솔더링 해야하는데 사실 이 부분이 제일 힘들었다. 처음에 사용하던 열풍기로는 디솔더링이 잘 안됐다. 
 -->
