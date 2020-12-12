@@ -1,13 +1,14 @@
 ### Page Contents <!-- omit in toc -->
-- [1. 개요](#1-개요)
+- [- 4.1. 한계점](#--41-한계점)
+- [1. Overview](#1-overview)
   - [1.1. Uart Log](#11-uart-log)
-  - [1.2. 파일 복호화](#12-파일-복호화)
-- [2. 소스코드 오디팅 준비](#2-소스코드-오디팅-준비)
-  - [2.1. 라이브러리 함수 심볼 복구](#21-라이브러리-함수-심볼-복구)
-- [3. 퍼징 준비](#3-퍼징-준비)
-  - [3.1. ps4 라이브러리](#31-ps4-라이브러리)
-  - [3.2. sprx를 so파일로 바꾸기](#32-sprx를-so파일로-바꾸기)
-  - [3.3. env파일 암복호화](#33-env파일-암복호화)
+  - [1.2. File Decryption](#12-file-decryption)
+- [2. Prepare Source Code Auditing](#2-prepare-source-code-auditing)
+  - [2.1. Restore Library Function Symbol](#21-restore-library-function-symbol)
+- [3. Prepare Fuzzing](#3-prepare-fuzzing)
+  - [3.1. PS4 Library](#31-ps4-library)
+  - [3.2. Transform sprx into so](#32-transform-sprx-into-so)
+  - [3.3. Encrypt/Decrypt env](#33-encryptdecrypt-env)
   - [3.4. SPRX / ELF HEADER](#34-sprx--elf-header)
   - [3.5. CRAFT PROGRAM HEADER](#35-craft-program-header)
   - [3.6. CRAFT DYNAMIC ENTRIES](#36-craft-dynamic-entries)
@@ -20,33 +21,47 @@
   - [4.1. 한계점](#41-한계점)
 ---
 # Library <!-- omit in toc -->
-## 1. 개요
+## 1. Overview
 ### 1.1. Uart Log
-Uart Log를 보다가 PS4에서 외부 서버에서 주기적으로 파일을 가져오는 것을 확인했다<br>
+<!--Uart Log를 보다가 PS4에서 외부 서버에서 주기적으로 파일을 가져오는 것을 확인했다<br> -->
+Looking at the UART log, We noticed that PS4 Periodically requests file from external server.
 ![image](https://user-images.githubusercontent.com/39231485/101589311-86880d00-3a2b-11eb-9906-aafc7b2b666e.png)
 ```
 SERVER_URL={http://ps4-system.sec.np.dl.playstation.net/ps4-system/hid_config/np/v00/hidusbpower.env}
 ```
-서버에서 전달받는 파일은 env파일이다. env파일은 PS4 서버와 기기사이에서 데이터를 주고받는 포맷으로 이에 대한 자세한 정보는 [여기](https://www.psdevwiki.com/ps4/Envelope_Files)에서 확인 가능하다. UART Log에서 출력된 해당 env파일의 처리루틴을 살펴본 결과, env파일의 복호화를 통해 xml파일이 생성되었고, 이를 libxml2 라이브러리에서 처리한다. **따라서 서버로부터 받아오는 env파일을 통신 중간에 임의로 변조하여 공격하는 새로운 시나리오를 생각해냈다. 그리고 이를 확장하여 기존에 WebKit, Freebsd 취약점을 사용하는 Jailbreak와는 다르게 프로세스 안에 있는 라이브러리의 취약점을 사용하는 것을 생각해봤다. 라이브러리 내의 취약점을 찾기 위해서 소스 코드 오디팅, 라이브러리 함수를 대상으로 퍼징을 시도한다.**
-### 1.2. 파일 복호화
-PS4 안의 파일들은 모두 암호화가 되어있기 때문에 복호화를 진행해야 한다. 복호화된 내용물을 모아둔 [사이트](https://darthsternie.net/ps4-decrypted-firmwares/)가 존재하여 이를 이용했다. 아쉽게도 2020년 12월 기준, 가장 최신 버전은 8.01이지만, 위 사이트에는 7.00버전까지 존재했고, 7.00버전을 분석했다.<br>
+<!--서버에서 전달받는 파일은 env파일이다. env파일은 PS4 서버와 기기사이에서 데이터를 주고받는 포맷으로 이에 대한 자세한 정보는 [여기](https://www.psdevwiki.com/ps4/Envelope_Files)에서 확인 가능하다. UART Log에서 출력된 해당 env파일의 처리루틴을 살펴본 결과, env파일의 복호화를 통해 xml파일이 생성되었고, 이를 libxml2 라이브러리에서 처리한다. **따라서 서버로부터 받아오는 env파일을 통신 중간에 임의로 변조하여 공격하는 새로운 시나리오를 생각해냈다. 그리고 이를 확장하여 기존에 WebKit, Freebsd 취약점을 사용하는 Jailbreak와는 다르게 프로세스 안에 있는 라이브러리의 취약점을 사용하는 것을 생각해봤다. 라이브러리 내의 취약점을 찾기 위해서 소스 코드 오디팅, 라이브러리 함수를 대상으로 퍼징을 시도한다.**-->
+The file received from the externel server is a 'env' file. The env file is a format for exchaining data between PS4 server and the device, and more detailed information about this can be found at [here](https://www.psdevwiki.com/ps4/Envelope_Files). As a result of examining the processing routine of the env file in UART log, an XML file was created through the decryption of the env file, and it is processed in the `libxml2` library. Therefore, we came up with a new senario where the env file received from the server is arbitrarily altered and attacked in the middle of communication. And by extending this, we considered using vulnerability of the library in the process, unline Jailbreak, which uses the existing WebKit and FreeBSD vulnerabilities. To find vulnerability in the library, we will try to audit the source code and fuzz to the library functions.
 
-## 2. 소스코드 오디팅 준비
-### 2.1. 라이브러리 함수 심볼 복구
-복호화된 sprx를 아이다로 열었을 때, 심볼은 존재하지 않는다.<br>
+### 1.2. File Decryption
+<!-- PS4 안의 파일들은 모두 암호화가 되어있기 때문에 복호화를 진행해야 한다. 복호화된 내용물을 모아둔 [사이트](https://darthsternie.net/ps4-decrypted-firmwares/)가 존재하여 이를 이용했다. 아쉽게도 2020년 12월 기준, 가장 최신 버전은 8.01이지만, 위 사이트에는 7.00버전까지 존재했고, 7.00버전을 분석했다.<br> -->
+Since all files in PS4 are encrypted, decryption is required. There is a [Site](https://darthsternie.net/ps4-decrypted-firmwares/) that collects decrypted contents, so we used it. Unfortunately, as of December 2020, the latest firmware version is 8.01, but there were up to 7.00 version on the above site, and we analyzed the 7.00 version.
+
+## 2. Prepare Source Code Auditing
+### 2.1. Restore Library Function Symbol
+<!--복호화된 sprx를 아이다로 열었을 때, 심볼은 존재하지 않는다.<br>-->
+When the decoded sprx file is opened with IDA, the symbol does not exist.
+
 ![image](https://user-images.githubusercontent.com/39231485/101623622-0f1ea180-3a5c-11eb-8f63-9687c8a3624d.png)
 
-하지만 심볼 대신 NID라는 것을 통하여 함수 주소와 매치시키는데, 만약 특정 NID가 어떤 함수명인지 안다면 심볼을 복구 할 수 있을 것이다.<br>
-NID와 함수명을 매치한 약 38000개의 데이터를 모아놓고, 이를 매칭시켜주는 아이다 플러그인을 만든 [사이트](https://github.com/SocraticBliss/ps4_module_loader)가 존재한다. 해당 플러그인을 사용하면 많은 함수들의 심볼들을 구할 수 있다.<br>![image](https://user-images.githubusercontent.com/39231485/101710935-d9b69a00-3ad5-11eb-9326-ff45cc95335b.png)<br>
+<!--하지만 심볼 대신 NID라는 것을 통하여 함수 주소와 매치시키는데, 만약 특정 NID가 어떤 함수명인지 안다면 심볼을 복구 할 수 있을 것이다.<br>
+NID와 함수명을 매치한 약 38000개의 데이터를 모아놓고, 이를 매칭시켜주는 아이다 플러그인을 만든 [사이트](https://github.com/SocraticBliss/ps4_module_loader)가 존재한다. 해당 플러그인을 사용하면 많은 함수들의 심볼들을 구할 수 있다.<br>-->
+Howerver, it matches the function address through the NID instead of the symbol. If you know what function name a specific NID is, you can recover the symbol.
+There is a [site](https://github.com/SocraticBliss/ps4_module_loader) that IDA plug-in that collects about 38,000 data and matches them. You can get the symbols of many functions by using this plug-in.
 
-## 3. 퍼징 준비
-### 3.1. ps4 라이브러리
+![image](https://user-images.githubusercontent.com/39231485/101710935-d9b69a00-3ad5-11eb-9326-ff45cc95335b.png)<br>
+
+## 3. Prepare Fuzzing
+### 3.1. PS4 Library
 ![image](https://user-images.githubusercontent.com/39231485/101594750-8e4caf00-3a35-11eb-891e-3102d8be47be.png)
   * ps4 라이브러리는 소니가 자체적으로 만든 sprx라는 포맷을 사용한다.
-### 3.2. sprx를 so파일로 바꾸기
-퍼징을 진행할 때, MITM기법으로 env파일을 변조하여 기기에 전달하는 방식은 속도가 매우 느리고, 콘솔 기기내의 code coverage를 분석하는데도 어려움이 있다. 따라서 xml 처리 루틴을 PC에서 재현한 후에 이를 이용하여 PC상에서 퍼징을 하려고 한다. sprx는 PS4 전용 포맷이기 때문에 이를 PC에서 사용할 수 있도록 하기 위해 elf 포맷으로 변경하는 것을 시도했다.
-### 3.3. env파일 암복호화
-변조된 xml데이터를 전달하기 위해서는, env파일 암복호화를 임의로 할 수 있도록 해야한다. [여기](https://github.com/SocraticBliss/ps4_env_decryptor)에서 env파일 복호화 코드를 구할 수 있다. 우리는 이를 참고하여 아래와같이 env파일 암호화 코드를 구현했다.
+### 3.2. Transform sprx into so
+<!--퍼징을 진행할 때, MITM기법으로 env파일을 변조하여 기기에 전달하는 방식은 속도가 매우 느리고, 콘솔 기기내의 code coverage를 분석하는데도 어려움이 있다. 따라서 xml 처리 루틴을 PC에서 재현한 후에 이를 이용하여 PC상에서 퍼징을 하려고 한다. sprx는 PS4 전용 포맷이기 때문에 이를 PC에서 사용할 수 있도록 하기 위해 elf 포맷으로 변경하는 것을 시도했다.-->
+When fuzing, the method of modulating the env file using the MITM technique and transmitting it to the device is very slow, and it is difficult to analyze the code coverage in the console device. Therefore, after reproducing the xml processing routine on the PC, we will fuzz on the PC using it. Since sprx is PS4 only format, we tried to transform it into elf format in order to be able to use it on PC.
+
+### 3.3. Encrypt/Decrypt env
+<!-- 변조된 xml데이터를 전달하기 위해서는, env파일 암복호화를 임의로 할 수 있도록 해야한다. [여기](https://github.com/SocraticBliss/ps4_env_decryptor)에서 env파일 복호화 코드를 구할 수 있다. 우리는 이를 참고하여 아래와같이 env파일 암호화 코드를 구현했다. -->
+To deliver the altered xml data, the env file must be encrypted and decrypted arbitrarily. [Here](https://github.com/SocraticBliss/ps4_env_decryptor), You can get the code for decrypting the env file. We referrec to this and implemented the code for encrypting the env file as follow.
+
 ```python
 from binascii import unhexlify as uhx, hexlify as hx
 from Crypto.Cipher import AES
@@ -166,7 +181,7 @@ def main(argc, argv):
         data1 = aes_encrypt_cbc_cts(key, iv, data)
 
 
-# env 파일 포맷 맞춰주기
+# setting env file format
 
         evil = ''
         evil += t[:0x4]
@@ -189,9 +204,11 @@ if __name__ == '__main__':
 ```
 ### 3.4. SPRX / ELF HEADER
 
-- 두 포맷의 헤더 필드는 거의 동일하다. 각각의 요소만 조금씩 변형시켜주면 된다.
+<!-- - 두 포맷의 헤더 필드는 거의 동일하다. 각각의 요소만 조금씩 변형시켜주면 된다. -->
+- The header fields of both formats are almost the same.
 
-우리가 리눅스에서 사용하는 ELF의 헤더이다. 
+<!-- 우리가 리눅스에서 사용하는 ELF의 헤더이다.  -->
+The following is the header of ELF used in Linux.
 
 ```python
 ELF Header:
@@ -216,7 +233,8 @@ ELF Header:
   Section header string table index: 2
 ```
 
-다음은 `SPRX`의 헤더를 읽어온 것이다.
+<!-- 다음은 `SPRX`의 헤더를 읽어온 것이다. -->
+And the following is the header of SPRX.
 
 ```python
 ELF Header:
@@ -241,9 +259,10 @@ ELF Header:
   Section header string table index: 0
 ```
 
-변경해야할 필드들과 변경할 값들을 쌍으로 나열해보면 다음과 같다.
+<!-- 변경해야할 필드들과 변경할 값들을 쌍으로 나열해보면 다음과 같다. -->
+Let's list the fields and values to be changed in pairs.
 
-- `OS/ABI` → 대상 운영 체제 ABI를 구별하는 필드.
+<!-- - `OS/ABI` → 대상 운영 체제 ABI를 구별하는 필드.
     - `UNIX FreeBSD` 로 설정되어있는  값을 `0x00(System V)` 로 변경시켜준다.
 - `TYPE`
     - 해당 파일이 어떤 파일인지 명시하는 필드
@@ -255,12 +274,29 @@ ELF Header:
 - `Number of program headers`
     - 프로그램 헤더의 갯수. 우리가 추가하거나 뺀만큼 조정해주면 된다.
 - `Number of section headers`
-    - 섹션 헤더들의 갯수. 추가한 만큼 나중에 늘려주면 된다.
+    - 섹션 헤더들의 갯수. 추가한 만큼 나중에 늘려주면 된다. -->
+- `OS/ABI`
+    - Field that identifies the target OS ABI
+    - It changes the value set in `UNIX FreeBSD` to `0x00(System V)`
+- `TYPE`
+    - Filed that specify the file type
+    - In `sprx`, the value for classifying files is slightly different, but don't have to worry about it. Our goal is to convert the `sprx` file into the `so` file, so we just need to set the field value to `3(shared object file)`.
+- `Entry point`
+    - For the `so` file, we set it to `0`.
+- `Start of section headers`
+    - Offset that should be set after adding the section header later.
+    - Strangely, `sprx` didn't use section header, but we need to add some sections so that other program can load them.
+- `Number of program headers`
+    - Number of program headers. Just adjust it by number we add or subtract.
+- `Number of section headers`
+    - Number of section headers. Just increase it later as much as we add it.
 
 ### 3.5. CRAFT PROGRAM HEADER
 
-- elf(.so)의 프로그램 헤더(참고용)
-    - GNU_ 가 붙은 타입들은 필수적이지 않은 요소들이라 일단 배제하고 보아도 된다.
+<!-- - elf(.so)의 프로그램 헤더(참고용) -->
+  <!-- - GNU_ 가 붙은 타입들은 필수적이지 않은 요소들이라 일단 배제하고 보아도 된다. -->
+- Program header of `elf(.so)` *(for reference only)*
+  - Types starting with `GNU_` are not essential, so we have excluded them for now.
 
 ```python
 Program Headers:
@@ -290,9 +326,12 @@ Program Headers:
                  0x00000000000001f8 0x00000000000001f8  R      0x1
 ```
 
-- sprx의 프로그램 헤더
+<!-- - sprx의 프로그램 헤더
     - 프로그램 헤더 타입 코드가 달라서 `readelf`로 읽어올시에 타입 이름이 이상하게 나타나지만, 대략적인 형태는 알아볼 수 있어서 다음과 같이 읽어왔다.
-    - sprx에서는 elf 헤더 부분을 메모리에 로딩하지 않는다.
+    - sprx에서는 elf 헤더 부분을 메모리에 로딩하지 않는다. -->
+  - Program header of `sprx`
+    - The type name appears strange when reading with `readelf` because the code of program header type is different, but the approximate form is recognizable, so we read it as follows.
+    - sprx does not load the part of elf header into memory.
 
 ```python
 Program Headers:
@@ -318,7 +357,8 @@ Program Headers:
                  0x0000000000000000 0x0000000000000000         0x10
 ```
 
-sprx의 프로그램 헤더를 불필요한 부분을 전부 제거한 뒤에 다음과 같이 바꿀 것이다.
+<!-- sprx의 프로그램 헤더를 불필요한 부분을 전부 제거한 뒤에 다음과 같이 바꿀 것이다. -->
+After removing all unnecessary parts of sprx's program header, it will be changed as follows.
 
 ```python
 LOAD           0x0000000000000000 0x0000000000000000 0x0000000000000000
@@ -337,20 +377,27 @@ LOAD           0x0000000000000000 0x0000000000000000 0x0000000000000000
 ....
 ```
 
-추가한 부분은 
+<!-- 추가한 부분은  -->
+The part we added is below.
 
 ```python
 LOAD           0x0000000000000000 0x0000000000000000 0x0000000000000000
                  0x0000000000003ff0 0x0000000000003ff0  RW     0x1000
 ```
 
-이 부분이다. 위 세그먼트는 elf header를 메모리에 로딩하기 위해 추가한 세그먼트다. 기존 세그먼트들 위에 새로운 세그먼트를 추가한 것이므로 파일 `offset, virtual/physical address`에 각각 해당 크기만큼을 더해줘야한다.
+<!-- 위 세그먼트는 elf header를 메모리에 로딩하기 위해 추가한 세그먼트다. 기존 세그먼트들 위에 새로운 세그먼트를 추가한 것이므로 파일 `offset, virtual/physical address`에 각각 해당 크기만큼을 더해줘야한다.
 
 세그먼트를 추가한 뒤에는 각각 원래 `LOAD` 세그먼트들의 offset + 추가한 세그먼트의 크기에다가 
 
 기존의 세그먼트 컨텐츠를 다 옮겨주면 된다. (코드영역, 문자열 정보 등)
 
-이제 여기서부터 기존의 elf와 다른 부분을 차근차근 고쳐나가면 되는데, 자세한 내용은 후술하면서 같이 언급할 예정이다.
+이제 여기서부터 기존의 elf와 다른 부분을 차근차근 고쳐나가면 되는데, 자세한 내용은 후술하면서 같이 언급할 예정이다. -->
+
+The segment above is added to load the elf header into memory. Since a new segment is added on top of existing segments, the corresponding size must be added to the file `offset, virtual/physical address`.
+
+After adding segments, 
+
+From hear on, it is enough to fix the parts that are different from the existing elf step by step, and details will be mentioned later.
 
 ### 3.6. CRAFT DYNAMIC ENTRIES
 
@@ -502,11 +549,11 @@ int main(){
 ![image](https://user-images.githubusercontent.com/39231485/101734324-70e61680-3b03-11eb-8315-cca6132f0dfe.png)<br>
 dlsym이 작동하지 않아서 이 함수의 오프셋을 넣고 함수 포인터를 호출시켰다.
 ```
- ► 0x7ffff7b978c0 <sceKernelGetCompiledSdkVersion+22720>    mov    rdi, qword ptr [rdi]
-   0x7ffff7b978c3 <sceKernelGetCompiledSdkVersion+22723>    test   rdi, rdi
-   0x7ffff7b978c6 <sceKernelGetCompiledSdkVersion+22726>    je     sceKernelGetCompiledSdkVersion+22733 <sceKernelGetCompiledSdkVersion+22733>
+ ► 0x7ffff7b978c0 <sce::Xml::Dom::NodeList::clear()>       mov    rdi, qword ptr [rdi]
+   0x7ffff7b978c3 <sce::Xml::Dom::NodeList::clear()+3>     test   rdi, rdi
+   0x7ffff7b978c6 <sce::Xml::Dom::NodeList::clear()+6>     je     sce::Xml::Dom::NodeList::clear()+13 <sce::Xml::Dom::NodeList::clear()+13>
     ↓
-   0x7ffff7b978cd <sceKernelGetCompiledSdkVersion+22733>    ret  
+   0x7ffff7b978cd <sce::Xml::Dom::NodeList::clear()+13>    ret
 ```
 해당 함수가 잘 호출 된 것을 확인할 수 있다. 그러므로 만약 퍼징을 돌린다고 하였을 때, 특정 함수에 여러 값들을 넣어보며 테스트 하는 것이 가능하다.
 
@@ -516,22 +563,23 @@ dlsym이 작동하지 않아서 이 함수의 오프셋을 넣고 함수 포인�
 ```
 ### 4.1. 한계점
 plt와 got가 연결되어있지 않기 때문에, 다른 라이브러리에서 import 하여 사용하는 함수는 실행시킬 수 없다.<br>
-dlsym이 안된다. - 이유는 추후에 작성
+만약 퍼징을 돌리려는 함수 안에 외부 라이브러리의 함수가 사용된다면 자체적으로 연결시켜줘야함<br>
+dlsym이 안된다. - 심볼 테이블에 무슨 문제가 있는듯
 
 ---
 
-### Contents <!-- omit in toc -->
-[Main](https://github.com/Hacker-s-PlayStation/PlayStation4-Hacking-Guideline-ENG/blob/main/README.md)<br>
+### Contents<!-- omit in toc -->
+[메인화면](https://github.com/Hacker-s-PlayStation/PlayStation4-Hacking-Guideline/blob/main/README.md)<br>
 
-#### Introduction
-[1. Jailbreak](https://github.com/Hacker-s-PlayStation/PlayStation4-Hacking-Guideline-ENG/blob/main/1_introduction/Jailbreak.md)<br>
-[2. PS4 Open Source](https://github.com/Hacker-s-PlayStation/PlayStation4-Hacking-Guideline-ENG/blob/main/1_introduction/PS4_Open_Source.md)<br>
-[3. Tools](https://github.com/Hacker-s-PlayStation/PlayStation4-Hacking-Guideline-ENG/blob/main/1_introduction/Tools.md)<br>
+#### PS4 소개<!-- omit in toc -->
+[1. Jailbreak](https://github.com/Hacker-s-PlayStation/PlayStation4-Hacking-Guideline/blob/main/1_introduction/Jailbreak.md)<br>
+[2. PS4 Open Source](https://github.com/Hacker-s-PlayStation/PlayStation4-Hacking-Guideline/blob/main/1_introduction/PS4_Open_Source.md)<br>
+[3. Tools](https://github.com/Hacker-s-PlayStation/PlayStation4-Hacking-Guideline/blob/main/1_introduction/Tools.md)<br>
 
-#### Methodology
-[1. WebKit](https://github.com/Hacker-s-PlayStation/PlayStation4-Hacking-Guideline-ENG/blob/main/2_methodology/WebKit.md)<br>
-[2. Hardware](https://github.com/Hacker-s-PlayStation/PlayStation4-Hacking-Guideline-ENG/blob/main/2_methodology/Hardware.md)<br>
-[3. Library](https://github.com/Hacker-s-PlayStation/PlayStation4-Hacking-Guideline-ENG/blob/main/2_methodology/Library.md)<br>
+#### 프로젝트 접근 방법론 <!-- omit in toc -->
+[1. WebKit](https://github.com/Hacker-s-PlayStation/PlayStation4-Hacking-Guideline/blob/main/2_methodology/WebKit.md)<br>
+[2. Hardware](https://github.com/Hacker-s-PlayStation/PlayStation4-Hacking-Guideline/blob/main/2_methodology/Hardware.md)<br>
+[3. Library](https://github.com/Hacker-s-PlayStation/PlayStation4-Hacking-Guideline/blob/main/2_methodology/Library.md)<br>
 
-#### Conclusion
-[Conclusion](https://github.com/Hacker-s-PlayStation/PlayStation4-Hacking-Guideline-ENG/blob/main/3_conclusion/Conclusion.md)
+#### 결론 <!-- omit in toc -->
+[결론](https://github.com/Hacker-s-PlayStation/PlayStation4-Hacking-Guideline/blob/main/3_conclusion/Conclusion.md)
