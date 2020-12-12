@@ -608,6 +608,8 @@ dlsym이 안된다. - 심볼 테이블에 무슨 문제가 있는듯 -->
 
 Because plt and got are not connected, functions imported and used from other libraries can't be executed. If a specific function from external library is used in the function to be fuzzed, it must be linked.
 
+And dlsym does not work. - There seem to be something wrong with the symbol table.
+
 ---
 
 ### Contents <!-- omit in toc -->
