@@ -1,5 +1,4 @@
 ### Page Contents <!-- omit in toc -->
-- [- 4.1. 한계점](#--41-한계점)
 - [1. Overview](#1-overview)
   - [1.1. Uart Log](#11-uart-log)
   - [1.2. File Decryption](#12-file-decryption)
@@ -16,9 +15,10 @@
     - [3.7.1. Creating DT_SYM](#371-creating-dt_sym)
   - [3.8. Creating relocation table](#38-creating-relocation-table)
   - [3.9. CREATING SECTION HEADER](#39-creating-section-header)
-  - [3.10. so 파일로 변환된 라이브러리 테스트](#310-so-파일로-변환된-라이브러리-테스트)
-- [4. 스크립트](#4-스크립트)
-  - [4.1. 한계점](#41-한계점)
+  - [3.10. Testing the library converted to so file](#310-testing-the-library-converted-to-so-file)
+- [4. Script](#4-script)
+  - [4.1. Limit](#41-limit)
+
 ---
 # Library <!-- omit in toc -->
 ## 1. Overview
@@ -45,22 +45,24 @@ When the decoded sprx file is opened with IDA, the symbol does not exist.
 
 <!--하지만 심볼 대신 NID라는 것을 통하여 함수 주소와 매치시키는데, 만약 특정 NID가 어떤 함수명인지 안다면 심볼을 복구 할 수 있을 것이다.<br>
 NID와 함수명을 매치한 약 38000개의 데이터를 모아놓고, 이를 매칭시켜주는 아이다 플러그인을 만든 [사이트](https://github.com/SocraticBliss/ps4_module_loader)가 존재한다. 해당 플러그인을 사용하면 많은 함수들의 심볼들을 구할 수 있다.<br>-->
-Howerver, it matches the function address through the NID instead of the symbol. If you know what function name a specific NID is, you can recover the symbol.
-There is a [site](https://github.com/SocraticBliss/ps4_module_loader) that IDA plug-in that collects about 38,000 data and matches them. You can get the symbols of many functions by using this plug-in.
+Howerver, it matches the function address through the NID instead of the symbol. If we know what function name a specific NID is, we can recover the symbol.
+There is a [site](https://github.com/SocraticBliss/ps4_module_loader) that IDA plug-in that collects about 38,000 data and matches them. We can get the symbols of many functions by using this plug-in.
 
 ![image](https://user-images.githubusercontent.com/39231485/101710935-d9b69a00-3ad5-11eb-9326-ff45cc95335b.png)<br>
 
 ## 3. Prepare Fuzzing
 ### 3.1. PS4 Library
 ![image](https://user-images.githubusercontent.com/39231485/101594750-8e4caf00-3a35-11eb-891e-3102d8be47be.png)
-  * ps4 라이브러리는 소니가 자체적으로 만든 sprx라는 포맷을 사용한다.
+
+  <!-- * ps4 라이브러리는 소니가 자체적으로 만든 sprx라는 포맷을 사용한다. -->
+  - The PS4 library uses a format called `sprx` made by Sony.
 ### 3.2. Transform sprx into so
 <!--퍼징을 진행할 때, MITM기법으로 env파일을 변조하여 기기에 전달하는 방식은 속도가 매우 느리고, 콘솔 기기내의 code coverage를 분석하는데도 어려움이 있다. 따라서 xml 처리 루틴을 PC에서 재현한 후에 이를 이용하여 PC상에서 퍼징을 하려고 한다. sprx는 PS4 전용 포맷이기 때문에 이를 PC에서 사용할 수 있도록 하기 위해 elf 포맷으로 변경하는 것을 시도했다.-->
 When fuzing, the method of modulating the env file using the MITM technique and transmitting it to the device is very slow, and it is difficult to analyze the code coverage in the console device. Therefore, after reproducing the xml processing routine on the PC, we will fuzz on the PC using it. Since sprx is PS4 only format, we tried to transform it into elf format in order to be able to use it on PC.
 
 ### 3.3. Encrypt/Decrypt env
 <!-- 변조된 xml데이터를 전달하기 위해서는, env파일 암복호화를 임의로 할 수 있도록 해야한다. [여기](https://github.com/SocraticBliss/ps4_env_decryptor)에서 env파일 복호화 코드를 구할 수 있다. 우리는 이를 참고하여 아래와같이 env파일 암호화 코드를 구현했다. -->
-To deliver the altered xml data, the env file must be encrypted and decrypted arbitrarily. [Here](https://github.com/SocraticBliss/ps4_env_decryptor), You can get the code for decrypting the env file. We referrec to this and implemented the code for encrypting the env file as follow.
+To deliver the altered xml data, the env file must be encrypted and decrypted arbitrarily. [Here](https://github.com/SocraticBliss/ps4_env_decryptor), you can get the code for decrypting the env file. We referred to this and implemented the code for encrypting the env file as follow.
 
 ```python
 from binascii import unhexlify as uhx, hexlify as hx
@@ -395,7 +397,7 @@ LOAD           0x0000000000000000 0x0000000000000000 0x0000000000000000
 
 The segment above is added to load the elf header into memory. Since a new segment is added on top of existing segments, the corresponding size must be added to the file `offset, virtual/physical address`.
 
-After adding segments, 
+After adding segments, we changed the virtual address and physical address by adding the size of added segment to the offset of original `LOAD` segment respectively.
 
 From hear on, it is enough to fix the parts that are different from the existing elf step by step, and details will be mentioned later.
 
@@ -414,11 +416,12 @@ LOAD:0000000000228490                 Elf64_Dyn <8, 818h>     ; DT_RELASZ
 LOAD:00000000002284A0                 Elf64_Dyn <0>           ; DT_NULL
 ```
 
-DYNAMIC 엔트리에서 필요한 정보들을 저장할 오프셋들을 미리 지정해둔 뒤에 해당 테이블을 옮겨오거나 새로 생성할 것이다. 
+<!-- DYNAMIC 엔트리에서 필요한 정보들을 저장할 오프셋들을 미리 지정해둔 뒤에 해당 테이블을 옮겨오거나 새로 생성할 것이다.  -->
+After specifying the offsets to store necessary information in the DYNAMIC entry, the table will be moved or created.
 
 ### 3.7. Creating DT_STRTAB
 
-일반적으로 ELF에서는 심볼 테이블에서 함수 이름이 위치한 string table의 인덱스를 가지고 있지만 
+<!-- 일반적으로 ELF에서는 심볼 테이블에서 함수 이름이 위치한 string table의 인덱스를 가지고 있지만 
 
 sprx에서는 함수 이름을 가진 테이블 대신에 함수 고유의 코드인 `nid` 를 가진 table이 존재한다. 
 
@@ -430,7 +433,13 @@ sprx에서는 함수 이름을 가진 테이블 대신에 함수 고유의 코�
 
 이 데이터베이스를 이용하여 함수 문자열을 얻어낸 다음 함수 스트링 테이블을 만들어주면 될 것이다. 그런데 이 스트링 테이블을 위한 세그먼트의 공간이 충분하지 않다면 직접 세그먼트를 추가해주면 된다. 
 
-그리고 해당 문자열의 크기만큼 `DT_STRSZ` 을 설정해주면 된다.
+그리고 해당 문자열의 크기만큼 `DT_STRSZ` 을 설정해주면 된다. -->
+
+Generally, ELF has the index of string table where the function name is located in the symbol table, but in sprx, instead of the table with the function name, thers is a table with `nid`, which is a function specific code. Symbol table uses the index of this nid table.
+
+More information is [here](https://blog.madnation.net/ps4-nid-resolver-ida-plugin/).
+
+Although not all, there is a database of what functions each nid refers to, so we can use this database to get a function string and then create a function string table. However, if there is not enough space for the segment for this string table, add the segment yourself.
 
 #### 3.7.1. Creating DT_SYM
 
@@ -446,13 +455,18 @@ SCE_DYNLIBDATA:00000000010292C8                 Symbol <290h, 12h, 0, 3, 47B0h, 
 SCE_DYNLIBDATA:00000000010292E0                 Symbol <2A0h, 12h, 0, 3, 4730h, 8> ; _ZN3sce3Xml11InitializerC1Ev | Global : Function
 ```
 
-sym table의 첫번째 필드값은 nid table에서 각각 함수들이 대응하는 nid의 오프셋을 가지고 있다.
+<!-- sym table의 첫번째 필드값은 nid table에서 각각 함수들이 대응하는 nid의 오프셋을 가지고 있다.
 
 4번째 필드값은 해당 함수가 위치한 섹션의 인덱스값이다. 나중에 .text섹션을 생성한뒤에 
 
 .text섹션이 몇번째에 위치해있는지를 적어주면 된다. 
 
-대략 어떻게 바뀌는지를 보여주면 다음과 같다.
+대략 어떻게 바뀌는지를 보여주면 다음과 같다. -->
+
+The first field value of the sym table has an offset of the nid corresponding to each function in the nid table.
+And the fourth field value is the index value of the section where the function is located. After creating `.text` section later, let's specify where this section is located.
+
+Here's how it changes roughly.
 
 ```python
 LOAD:0000000000024820                 Elf64_Sym <offset aZn3sce3xml10si - offset unk_2000, 12h, 0, 3, \ ; "_ZN3sce3Xml10SimpleDataC1EPKcm" ...
@@ -476,10 +490,15 @@ LOAD:00000000000248C8                            offset _ZN3sce3Xml11Initializer
 
 ### 3.8. Creating relocation table
 
-relocation table은 그대로 copy해오면 되는데, 몇가지 유의할 점이 있다.
+<!-- relocation table은 그대로 copy해오면 되는데, 몇가지 유의할 점이 있다.
 
 - 세그먼트를 새로 추가해주었으므로  `offset` 값과 `addend` 값에 새로 추가해준 세그먼트 값을 더해줘야 할 뿐만 아니라, 해당 offset에 위치한 포인터에 대해서도 값을 더해줘야 한다.
-- 함수 포인터의 경우 sprx에서는 심볼 테이블과 같은 형태 비슷한 형태로 info를 나타내고 있는데 이 경우 다른 relocation 값들과 같이 구성해주면 된다.
+- 함수 포인터의 경우 sprx에서는 심볼 테이블과 같은 형태 비슷한 형태로 info를 나타내고 있는데 이 경우 다른 relocation 값들과 같이 구성해주면 된다. -->
+
+You can copy the relocation table as it is, but there are a few things to note.
+
+- Since the segment has been newly added, not only the newly added segment value must be added to the `offset` and `addend` value, but also the value for the pointer located at the corresponding offset must be added.
+- In the case of function pointer, sprx displays info in a form similar to the symbol table. In this case, it can be configured with other relocation values.
 
 ```python
 SCE_DYNLIBDATA:000000000102AAB0                 Relocation <offset sce::Xml::MemAllocator::~MemAllocator(), \ ; R_X86_64_64
@@ -492,7 +511,7 @@ LOAD:0000000000026170                 Elf64_Rela <28068h, 8, 1C357h> ; R_X86_64_
 
 ### 3.9. CREATING SECTION HEADER
 
-섹션 헤더를 만드는 부분은 그냥 일반적인 elf 포맷에 대한 이해도만 있으면 된다.
+<!-- 섹션 헤더를 만드는 부분은 그냥 일반적인 elf 포맷에 대한 이해도만 있으면 된다.
 
 원래 sprx 포맷에서는 섹션 헤더를 사용하지 않는데, 리눅스에서 dlopen으로 메모리에 로딩되기 위해서는 몇몇 필수적인 섹션들이 있다. 이는 몇가지 테스트를 통해 알아낸 내용이다.
 
@@ -510,7 +529,21 @@ LOAD:0000000000026170                 Elf64_Rela <28068h, 8, 1C357h> ; R_X86_64_
 
 `.dynsym` 또한 똑같다. 필드값에 이전에 생성했었던 symbol table의 entry size, 주소, 오프셋, 사이즈등을 적어주면 된다.
 
-sprx에서 코드 영역은 항상 첫번째 세그먼트( 헤더가 로딩되지 않으므로 항상 첫번째 세그먼트에 코드가 위치한다고 생각해도 된다.)에 있으므로 .text 섹션에는 해당 세그먼트의 정보들을 옮겨주면 될 것이다.(offset, address, 권한, type등등)
+sprx에서 코드 영역은 항상 첫번째 세그먼트( 헤더가 로딩되지 않으므로 항상 첫번째 세그먼트에 코드가 위치한다고 생각해도 된다.)에 있으므로 .text 섹션에는 해당 세그먼트의 정보들을 옮겨주면 될 것이다.(offset, address, 권한, type등등) -->
+
+The part of creating the section header just needs to understand the general elf format.
+
+The original sprx format does not use section headers, but there are some essential sections required to be loaded into memory with dlopen in Linux. This is what we found out through several tests.
+
+It's easy to write down the information in the section.
+
+To mark the section name, you can save section name in a free space(not much space is required), and put the saved information in the `.shstrndx` section heade. And you can write the position of `.shstrndx` in `Section header string table index` of elf header.
+
+In `.dynamic`, you can write the information of dynamic entries(created above). Enter the entry size, address, offset, size, etc. in the field value.
+
+The same is true for `.dynsym`. In the field value, write the entry size, address, offset, size, etc. of the previously created symbol table.
+
+In sprx, the code section is always in the first segment(the header is not loaded, so you can think that the code is always in the first segment), so you just need to move the information of that segment to the `.text` section. (offset, address, authority, type, etc.)
 
 ```python
 [Nr] Name              Type             Address           Offset
@@ -528,7 +561,7 @@ sprx에서 코드 영역은 항상 첫번째 세그먼트( 헤더가 로딩되�
   [ 5] .text             PROGBITS         0000000000004000  00004000
        000000000001ebf0  0000000000000000  AX       0     0     16
 ```
-### 3.10. so 파일로 변환된 라이브러리 테스트
+### 3.10. Testing the library converted to so file
 ```c
 #include <stdio.h>
 #include <dlfcn.h>
@@ -545,9 +578,14 @@ int main(){
     return 0;
 }
 ```
-위 소스코드를 사용하여 함수가 잘 실행되는지 테스트해볼 것이다.
-![image](https://user-images.githubusercontent.com/39231485/101734324-70e61680-3b03-11eb-8315-cca6132f0dfe.png)<br>
-dlsym이 작동하지 않아서 이 함수의 오프셋을 넣고 함수 포인터를 호출시켰다.
+<!-- 위 소스코드를 사용하여 함수가 잘 실행되는지 테스트해볼 것이다. -->
+Using the above source code, we tested whether the function works well.
+
+![image](https://user-images.githubusercontent.com/39231485/101734324-70e61680-3b03-11eb-8315-cca6132f0dfe.png)
+
+<!-- dlsym이 작동하지 않아서 이 함수의 오프셋을 넣고 함수 포인터를 호출시켰다. -->
+Since dlsym didn't work, we put the offset of this function and called the function pointer.
+
 ```
  ► 0x7ffff7b978c0 <sce::Xml::Dom::NodeList::clear()>       mov    rdi, qword ptr [rdi]
    0x7ffff7b978c3 <sce::Xml::Dom::NodeList::clear()+3>     test   rdi, rdi
@@ -555,16 +593,20 @@ dlsym이 작동하지 않아서 이 함수의 오프셋을 넣고 함수 포인�
     ↓
    0x7ffff7b978cd <sce::Xml::Dom::NodeList::clear()+13>    ret
 ```
-해당 함수가 잘 호출 된 것을 확인할 수 있다. 그러므로 만약 퍼징을 돌린다고 하였을 때, 특정 함수에 여러 값들을 넣어보며 테스트 하는 것이 가능하다.
+<!-- 해당 함수가 잘 호출 된 것을 확인할 수 있다. 그러므로 만약 퍼징을 돌린다고 하였을 때, 특정 함수에 여러 값들을 넣어보며 테스트 하는 것이 가능하다. -->
 
-## 4. 스크립트
+As a result, it was confired that the function was called well. Therefore, if fuzzing, it is possible to test by putting various values in specific function.
+
+## 4. Script
 ```
-추후 넣을 계획
+put in later ...
 ```
-### 4.1. 한계점
-plt와 got가 연결되어있지 않기 때문에, 다른 라이브러리에서 import 하여 사용하는 함수는 실행시킬 수 없다.<br>
+### 4.1. Limit
+<!-- plt와 got가 연결되어있지 않기 때문에, 다른 라이브러리에서 import 하여 사용하는 함수는 실행시킬 수 없다.<br>
 만약 퍼징을 돌리려는 함수 안에 외부 라이브러리의 함수가 사용된다면 자체적으로 연결시켜줘야함<br>
-dlsym이 안된다. - 심볼 테이블에 무슨 문제가 있는듯
+dlsym이 안된다. - 심볼 테이블에 무슨 문제가 있는듯 -->
+
+Because plt and got are not connected, functions imported and used from other libraries can't be executed. If a specific function from external library is used in the function to be fuzzed, it must be linked.
 
 ---
 
