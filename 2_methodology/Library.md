@@ -7,14 +7,14 @@
 - [3. Prepare Fuzzing](#3-prepare-fuzzing)
   - [3.1. PS4 Library](#31-ps4-library)
   - [3.2. Transform sprx into so](#32-transform-sprx-into-so)
-  - [3.3. Encrypt/Decrypt env](#33-encryptdecrypt-env)
-  - [3.4. SPRX / ELF HEADER](#34-sprx--elf-header)
-  - [3.5. CRAFT PROGRAM HEADER](#35-craft-program-header)
-  - [3.6. CRAFT DYNAMIC ENTRIES](#36-craft-dynamic-entries)
+  - [3.3. Encrypt / Decrypt env](#33-encrypt--decrypt-env)
+  - [3.4. SPRX / ELF Header](#34-sprx--elf-header)
+  - [3.5. Craft Program Header](#35-craft-program-header)
+  - [3.6. Craft Dynamic Entries](#36-craft-dynamic-entries)
   - [3.7. Creating DT_STRTAB](#37-creating-dt_strtab)
     - [3.7.1. Creating DT_SYM](#371-creating-dt_sym)
   - [3.8. Creating relocation table](#38-creating-relocation-table)
-  - [3.9. CREATING SECTION HEADER](#39-creating-section-header)
+  - [3.9. Creating Section Header](#39-creating-section-header)
   - [3.10. Testing the library converted to so file](#310-testing-the-library-converted-to-so-file)
 - [4. Script](#4-script)
   - [4.1. Limit](#41-limit)
@@ -58,9 +58,9 @@ There is a [site](https://github.com/SocraticBliss/ps4_module_loader) that IDA p
   - The PS4 library uses a format called `sprx` made by Sony.
 ### 3.2. Transform sprx into so
 <!--퍼징을 진행할 때, MITM기법으로 env파일을 변조하여 기기에 전달하는 방식은 속도가 매우 느리고, 콘솔 기기내의 code coverage를 분석하는데도 어려움이 있다. 따라서 xml 처리 루틴을 PC에서 재현한 후에 이를 이용하여 PC상에서 퍼징을 하려고 한다. sprx는 PS4 전용 포맷이기 때문에 이를 PC에서 사용할 수 있도록 하기 위해 elf 포맷으로 변경하는 것을 시도했다.-->
-When fuzing, the method of modulating the env file using the MITM technique and transmitting it to the device is very slow, and it is difficult to analyze the code coverage in the console device. Therefore, after reproducing the xml processing routine on the PC, we will fuzz on the PC using it. Since sprx is PS4 only format, we tried to transform it into elf format in order to be able to use it on PC.
+When fuzzing, the method of modulating the env file using the MITM technique and transmitting it to the device is very slow, and it is difficult to analyze the code coverage in the console device. Therefore, after reproducing the xml processing routine on the PC, we will fuzz on the PC using it. Since sprx is PS4 only format, we tried to transform it into elf format in order to be able to use it on PC.
 
-### 3.3. Encrypt/Decrypt env
+### 3.3. Encrypt / Decrypt env
 <!-- 변조된 xml데이터를 전달하기 위해서는, env파일 암복호화를 임의로 할 수 있도록 해야한다. [여기](https://github.com/SocraticBliss/ps4_env_decryptor)에서 env파일 복호화 코드를 구할 수 있다. 우리는 이를 참고하여 아래와같이 env파일 암호화 코드를 구현했다. -->
 To deliver the altered xml data, the env file must be encrypted and decrypted arbitrarily. [Here](https://github.com/SocraticBliss/ps4_env_decryptor), you can get the code for decrypting the env file. We referred to this and implemented the code for encrypting the env file as follow.
 
@@ -204,7 +204,7 @@ def main(argc, argv):
 if __name__ == '__main__':
     main(len(sys.argv), sys.argv)
 ```
-### 3.4. SPRX / ELF HEADER
+### 3.4. SPRX / ELF Header
 
 <!-- - 두 포맷의 헤더 필드는 거의 동일하다. 각각의 요소만 조금씩 변형시켜주면 된다. -->
 - The header fields of both formats are almost the same.
@@ -293,7 +293,7 @@ Let's list the fields and values to be changed in pairs.
 - `Number of section headers`
     - Number of section headers. Just increase it later as much as we add it.
 
-### 3.5. CRAFT PROGRAM HEADER
+### 3.5. Craft Program Header
 
 <!-- - elf(.so)의 프로그램 헤더(참고용) -->
   <!-- - GNU_ 가 붙은 타입들은 필수적이지 않은 요소들이라 일단 배제하고 보아도 된다. -->
@@ -401,7 +401,7 @@ After adding segments, we changed the virtual address and physical address by ad
 
 From hear on, it is enough to fix the parts that are different from the existing elf step by step, and details will be mentioned later.
 
-### 3.6. CRAFT DYNAMIC ENTRIES
+### 3.6. Craft Dynamic Entries
 
 ```python
 LOAD:0000000000228410                 Elf64_Dyn <5, 2000h>    ; DT_STRTAB
@@ -509,7 +509,7 @@ SCE_DYNLIBDATA:000000000102AAB0                             2A00000001h, 0>
 LOAD:0000000000026170                 Elf64_Rela <28068h, 8, 1C357h> ; R_X86_64_RELATIVE +1C357h
 ```
 
-### 3.9. CREATING SECTION HEADER
+### 3.9. Creating Section Header
 
 <!-- 섹션 헤더를 만드는 부분은 그냥 일반적인 elf 포맷에 대한 이해도만 있으면 된다.
 
