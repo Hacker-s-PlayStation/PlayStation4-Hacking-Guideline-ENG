@@ -1,52 +1,69 @@
 ### Page Contents <!-- omit in toc -->
-- [1. 개요](#1-개요)
+- [1. Overview](#1-overview)
   - [1.1. Uart Log](#11-uart-log)
-  - [1.2. 파일 복호화](#12-파일-복호화)
-- [2. 소스코드 오디팅 준비](#2-소스코드-오디팅-준비)
-  - [2.1. 라이브러리 함수 심볼 복구](#21-라이브러리-함수-심볼-복구)
-- [3. 퍼징 준비](#3-퍼징-준비)
-  - [3.1. ps4 라이브러리](#31-ps4-라이브러리)
-  - [3.2. sprx를 so파일로 바꾸기](#32-sprx를-so파일로-바꾸기)
-  - [3.3. env파일 암복호화](#33-env파일-암복호화)
-  - [3.4. SPRX / ELF HEADER](#34-sprx--elf-header)
-  - [3.5. CRAFT PROGRAM HEADER](#35-craft-program-header)
-  - [3.6. CRAFT DYNAMIC ENTRIES](#36-craft-dynamic-entries)
+  - [1.2. File Decryption](#12-file-decryption)
+- [2. Prepare Source Code Auditing](#2-prepare-source-code-auditing)
+  - [2.1. Restore Library Function Symbol](#21-restore-library-function-symbol)
+- [3. Prepare Fuzzing](#3-prepare-fuzzing)
+  - [3.1. PS4 Library](#31-ps4-library)
+  - [3.2. Transform sprx into so](#32-transform-sprx-into-so)
+  - [3.3. Encrypt / Decrypt env](#33-encrypt--decrypt-env)
+  - [3.4. SPRX / ELF Header](#34-sprx--elf-header)
+  - [3.5. Craft Program Header](#35-craft-program-header)
+  - [3.6. Craft Dynamic Entries](#36-craft-dynamic-entries)
   - [3.7. Creating DT_STRTAB](#37-creating-dt_strtab)
     - [3.7.1. Creating DT_SYM](#371-creating-dt_sym)
   - [3.8. Creating relocation table](#38-creating-relocation-table)
-  - [3.9. CREATING SECTION HEADER](#39-creating-section-header)
-  - [3.10. so 파일로 변환된 라이브러리 테스트](#310-so-파일로-변환된-라이브러리-테스트)
-- [4. 스크립트](#4-스크립트)
-  - [4.1. 한계점](#41-한계점)
+  - [3.9. Creating Section Header](#39-creating-section-header)
+  - [3.10. Testing the library converted to so file](#310-testing-the-library-converted-to-so-file)
+- [4. Script](#4-script)
+  - [4.1. Limit](#41-limit)
+
 ---
 # Library <!-- omit in toc -->
-## 1. 개요
+## 1. Overview
 ### 1.1. Uart Log
-Uart Log를 보다가 PS4에서 외부 서버에서 주기적으로 파일을 가져오는 것을 확인했다<br>
+<!--Uart Log를 보다가 PS4에서 외부 서버에서 주기적으로 파일을 가져오는 것을 확인했다<br> -->
+Looking at the UART log, We noticed that PS4 periodically requests file from external server.
 ![image](https://user-images.githubusercontent.com/39231485/101589311-86880d00-3a2b-11eb-9906-aafc7b2b666e.png)
 ```
 SERVER_URL={http://ps4-system.sec.np.dl.playstation.net/ps4-system/hid_config/np/v00/hidusbpower.env}
 ```
-서버에서 전달받는 파일은 env파일이다. env파일은 PS4 서버와 기기사이에서 데이터를 주고받는 포맷으로 이에 대한 자세한 정보는 [여기](https://www.psdevwiki.com/ps4/Envelope_Files)에서 확인 가능하다. UART Log에서 출력된 해당 env파일의 처리루틴을 살펴본 결과, env파일의 복호화를 통해 xml파일이 생성되었고, 이를 libxml2 라이브러리에서 처리한다. **따라서 서버로부터 받아오는 env파일을 통신 중간에 임의로 변조하여 공격하는 새로운 시나리오를 생각해냈다. 그리고 이를 확장하여 기존에 WebKit, Freebsd 취약점을 사용하는 Jailbreak와는 다르게 프로세스 안에 있는 라이브러리의 취약점을 사용하는 것을 생각해봤다. 라이브러리 내의 취약점을 찾기 위해서 소스 코드 오디팅, 라이브러리 함수를 대상으로 퍼징을 시도한다.**
-### 1.2. 파일 복호화
-PS4 안의 파일들은 모두 암호화가 되어있기 때문에 복호화를 진행해야 한다. 복호화된 내용물을 모아둔 [사이트](https://darthsternie.net/ps4-decrypted-firmwares/)가 존재하여 이를 이용했다. 아쉽게도 2020년 12월 기준, 가장 최신 버전은 8.01이지만, 위 사이트에는 7.00버전까지 존재했고, 7.00버전을 분석했다.<br>
+<!--서버에서 전달받는 파일은 env파일이다. env파일은 PS4 서버와 기기사이에서 데이터를 주고받는 포맷으로 이에 대한 자세한 정보는 [여기](https://www.psdevwiki.com/ps4/Envelope_Files)에서 확인 가능하다. UART Log에서 출력된 해당 env파일의 처리루틴을 살펴본 결과, env파일의 복호화를 통해 xml파일이 생성되었고, 이를 libxml2 라이브러리에서 처리한다. **따라서 서버로부터 받아오는 env파일을 통신 중간에 임의로 변조하여 공격하는 새로운 시나리오를 생각해냈다. 그리고 이를 확장하여 기존에 WebKit, Freebsd 취약점을 사용하는 Jailbreak와는 다르게 프로세스 안에 있는 라이브러리의 취약점을 사용하는 것을 생각해봤다. 라이브러리 내의 취약점을 찾기 위해서 소스 코드 오디팅, 라이브러리 함수를 대상으로 퍼징을 시도한다.**-->
+The file received from the externel server is a 'env' file. The env file is a format for exchaining data between PS4 server and the device, and more detailed information about this can be found at [here](https://www.psdevwiki.com/ps4/Envelope_Files). As a result of examining the processing routine of the env file in UART log, an XML file was created through the decryption of the env file, and it is processed in the `libxml2` library. Therefore, we came up with a new senario where the env file received from the server is arbitrarily altered and attacked in the middle of communication. And by extending this, we considered using vulnerability of the library in the process, unline Jailbreak, which uses the existing WebKit and FreeBSD vulnerabilities. To find vulnerability in the library, we will try to audit the source code and fuzz to the library functions.
 
-## 2. 소스코드 오디팅 준비
-### 2.1. 라이브러리 함수 심볼 복구
-복호화된 sprx를 아이다로 열었을 때, 심볼은 존재하지 않는다.<br>
+### 1.2. File Decryption
+<!-- PS4 안의 파일들은 모두 암호화가 되어있기 때문에 복호화를 진행해야 한다. 복호화된 내용물을 모아둔 [사이트](https://darthsternie.net/ps4-decrypted-firmwares/)가 존재하여 이를 이용했다. 아쉽게도 2020년 12월 기준, 가장 최신 버전은 8.01이지만, 위 사이트에는 7.00버전까지 존재했고, 7.00버전을 분석했다.<br> -->
+Since all files in PS4 are encrypted, decryption is required. There is a [Site](https://darthsternie.net/ps4-decrypted-firmwares/) that collects decrypted contents, so we used it. Unfortunately, as of December 2020, the latest firmware version is 8.01, but there were up to 7.00 version on the above site, and we analyzed the 7.00 version.
+
+## 2. Prepare Source Code Auditing
+### 2.1. Restore Library Function Symbol
+<!--복호화된 sprx를 아이다로 열었을 때, 심볼은 존재하지 않는다.<br>-->
+When the decoded sprx file is opened with IDA, the symbol does not exist.
+
 ![image](https://user-images.githubusercontent.com/39231485/101623622-0f1ea180-3a5c-11eb-8f63-9687c8a3624d.png)
 
-하지만 심볼 대신 NID라는 것을 통하여 함수 주소와 매치시키는데, 만약 특정 NID가 어떤 함수명인지 안다면 심볼을 복구 할 수 있을 것이다.<br>
-NID와 함수명을 매치한 약 38000개의 데이터를 모아놓고, 이를 매칭시켜주는 아이다 플러그인을 만든 [사이트](https://github.com/SocraticBliss/ps4_module_loader)가 존재한다. 해당 플러그인을 사용하면 많은 함수들의 심볼들을 구할 수 있다.<br>![image](https://user-images.githubusercontent.com/39231485/101710935-d9b69a00-3ad5-11eb-9326-ff45cc95335b.png)<br>
+<!--하지만 심볼 대신 NID라는 것을 통하여 함수 주소와 매치시키는데, 만약 특정 NID가 어떤 함수명인지 안다면 심볼을 복구 할 수 있을 것이다.<br>
+NID와 함수명을 매치한 약 38000개의 데이터를 모아놓고, 이를 매칭시켜주는 아이다 플러그인을 만든 [사이트](https://github.com/SocraticBliss/ps4_module_loader)가 존재한다. 해당 플러그인을 사용하면 많은 함수들의 심볼들을 구할 수 있다.<br>-->
+Howerver, it matches the function address through the NID instead of the symbol. If we know what function name a specific NID is, we can recover the symbol.
+There is a [site](https://github.com/SocraticBliss/ps4_module_loader) that IDA plug-in that collects about 38,000 data and matches them. We can get the symbols of many functions by using this plug-in.
 
-## 3. 퍼징 준비
-### 3.1. ps4 라이브러리
+![image](https://user-images.githubusercontent.com/39231485/101710935-d9b69a00-3ad5-11eb-9326-ff45cc95335b.png)<br>
+
+## 3. Prepare Fuzzing
+### 3.1. PS4 Library
 ![image](https://user-images.githubusercontent.com/39231485/101594750-8e4caf00-3a35-11eb-891e-3102d8be47be.png)
-  * ps4 라이브러리는 소니가 자체적으로 만든 sprx라는 포맷을 사용한다.
-### 3.2. sprx를 so파일로 바꾸기
-퍼징을 진행할 때, MITM기법으로 env파일을 변조하여 기기에 전달하는 방식은 속도가 매우 느리고, 콘솔 기기내의 code coverage를 분석하는데도 어려움이 있다. 따라서 xml 처리 루틴을 PC에서 재현한 후에 이를 이용하여 PC상에서 퍼징을 하려고 한다. sprx는 PS4 전용 포맷이기 때문에 이를 PC에서 사용할 수 있도록 하기 위해 elf 포맷으로 변경하는 것을 시도했다.
-### 3.3. env파일 암복호화
-변조된 xml데이터를 전달하기 위해서는, env파일 암복호화를 임의로 할 수 있도록 해야한다. [여기](https://github.com/SocraticBliss/ps4_env_decryptor)에서 env파일 복호화 코드를 구할 수 있다. 우리는 이를 참고하여 아래와같이 env파일 암호화 코드를 구현했다.
+
+  <!-- * ps4 라이브러리는 소니가 자체적으로 만든 sprx라는 포맷을 사용한다. -->
+  - The PS4 library uses a format called `sprx` made by Sony.
+### 3.2. Transform sprx into so
+<!--퍼징을 진행할 때, MITM기법으로 env파일을 변조하여 기기에 전달하는 방식은 속도가 매우 느리고, 콘솔 기기내의 code coverage를 분석하는데도 어려움이 있다. 따라서 xml 처리 루틴을 PC에서 재현한 후에 이를 이용하여 PC상에서 퍼징을 하려고 한다. sprx는 PS4 전용 포맷이기 때문에 이를 PC에서 사용할 수 있도록 하기 위해 elf 포맷으로 변경하는 것을 시도했다.-->
+When fuzzing, the method of modulating the env file using the MITM technique and transmitting it to the device is very slow, and it is difficult to analyze the code coverage in the console device. Therefore, after reproducing the xml processing routine on the PC, we will fuzz on the PC using it. Since sprx is PS4 only format, we tried to transform it into elf format in order to be able to use it on PC.
+
+### 3.3. Encrypt / Decrypt env
+<!-- 변조된 xml데이터를 전달하기 위해서는, env파일 암복호화를 임의로 할 수 있도록 해야한다. [여기](https://github.com/SocraticBliss/ps4_env_decryptor)에서 env파일 복호화 코드를 구할 수 있다. 우리는 이를 참고하여 아래와같이 env파일 암호화 코드를 구현했다. -->
+To deliver the altered xml data, the env file must be encrypted and decrypted arbitrarily. [Here](https://github.com/SocraticBliss/ps4_env_decryptor), you can get the code for decrypting the env file. We referred to this and implemented the code for encrypting the env file as follow.
+
 ```python
 from binascii import unhexlify as uhx, hexlify as hx
 from Crypto.Cipher import AES
@@ -166,7 +183,7 @@ def main(argc, argv):
         data1 = aes_encrypt_cbc_cts(key, iv, data)
 
 
-# env 파일 포맷 맞춰주기
+# setting env file format
 
         evil = ''
         evil += t[:0x4]
@@ -187,11 +204,13 @@ def main(argc, argv):
 if __name__ == '__main__':
     main(len(sys.argv), sys.argv)
 ```
-### 3.4. SPRX / ELF HEADER
+### 3.4. SPRX / ELF Header
 
-- 두 포맷의 헤더 필드는 거의 동일하다. 각각의 요소만 조금씩 변형시켜주면 된다.
+<!-- - 두 포맷의 헤더 필드는 거의 동일하다. 각각의 요소만 조금씩 변형시켜주면 된다. -->
+- The header fields of both formats are almost the same.
 
-우리가 리눅스에서 사용하는 ELF의 헤더이다. 
+<!-- 우리가 리눅스에서 사용하는 ELF의 헤더이다.  -->
+The following is the header of ELF used in Linux.
 
 ```python
 ELF Header:
@@ -216,7 +235,8 @@ ELF Header:
   Section header string table index: 2
 ```
 
-다음은 `SPRX`의 헤더를 읽어온 것이다.
+<!-- 다음은 `SPRX`의 헤더를 읽어온 것이다. -->
+And the following is the header of SPRX.
 
 ```python
 ELF Header:
@@ -241,9 +261,10 @@ ELF Header:
   Section header string table index: 0
 ```
 
-변경해야할 필드들과 변경할 값들을 쌍으로 나열해보면 다음과 같다.
+<!-- 변경해야할 필드들과 변경할 값들을 쌍으로 나열해보면 다음과 같다. -->
+Let's list the fields and values to be changed in pairs.
 
-- `OS/ABI` → 대상 운영 체제 ABI를 구별하는 필드.
+<!-- - `OS/ABI` → 대상 운영 체제 ABI를 구별하는 필드.
     - `UNIX FreeBSD` 로 설정되어있는  값을 `0x00(System V)` 로 변경시켜준다.
 - `TYPE`
     - 해당 파일이 어떤 파일인지 명시하는 필드
@@ -255,12 +276,29 @@ ELF Header:
 - `Number of program headers`
     - 프로그램 헤더의 갯수. 우리가 추가하거나 뺀만큼 조정해주면 된다.
 - `Number of section headers`
-    - 섹션 헤더들의 갯수. 추가한 만큼 나중에 늘려주면 된다.
+    - 섹션 헤더들의 갯수. 추가한 만큼 나중에 늘려주면 된다. -->
+- `OS/ABI`
+    - Field that identifies the target OS ABI
+    - It changes the value set in `UNIX FreeBSD` to `0x00(System V)`
+- `TYPE`
+    - Filed that specify the file type
+    - In `sprx`, the value for classifying files is slightly different, but don't have to worry about it. Our goal is to convert the `sprx` file into the `so` file, so we just need to set the field value to `3(shared object file)`.
+- `Entry point`
+    - For the `so` file, we set it to `0`.
+- `Start of section headers`
+    - Offset that should be set after adding the section header later.
+    - Strangely, `sprx` didn't use section header, but we need to add some sections so that other program can load them.
+- `Number of program headers`
+    - Number of program headers. Just adjust it by number we add or subtract.
+- `Number of section headers`
+    - Number of section headers. Just increase it later as much as we add it.
 
-### 3.5. CRAFT PROGRAM HEADER
+### 3.5. Craft Program Header
 
-- elf(.so)의 프로그램 헤더(참고용)
-    - GNU_ 가 붙은 타입들은 필수적이지 않은 요소들이라 일단 배제하고 보아도 된다.
+<!-- - elf(.so)의 프로그램 헤더(참고용) -->
+  <!-- - GNU_ 가 붙은 타입들은 필수적이지 않은 요소들이라 일단 배제하고 보아도 된다. -->
+- Program header of `elf(.so)` *(for reference only)*
+  - Types starting with `GNU_` are not essential, so we have excluded them for now.
 
 ```python
 Program Headers:
@@ -290,9 +328,12 @@ Program Headers:
                  0x00000000000001f8 0x00000000000001f8  R      0x1
 ```
 
-- sprx의 프로그램 헤더
+<!-- - sprx의 프로그램 헤더
     - 프로그램 헤더 타입 코드가 달라서 `readelf`로 읽어올시에 타입 이름이 이상하게 나타나지만, 대략적인 형태는 알아볼 수 있어서 다음과 같이 읽어왔다.
-    - sprx에서는 elf 헤더 부분을 메모리에 로딩하지 않는다.
+    - sprx에서는 elf 헤더 부분을 메모리에 로딩하지 않는다. -->
+  - Program header of `sprx`
+    - The type name appears strange when reading with `readelf` because the code of program header type is different, but the approximate form is recognizable, so we read it as follows.
+    - sprx does not load the part of elf header into memory.
 
 ```python
 Program Headers:
@@ -318,7 +359,8 @@ Program Headers:
                  0x0000000000000000 0x0000000000000000         0x10
 ```
 
-sprx의 프로그램 헤더를 불필요한 부분을 전부 제거한 뒤에 다음과 같이 바꿀 것이다.
+<!-- sprx의 프로그램 헤더를 불필요한 부분을 전부 제거한 뒤에 다음과 같이 바꿀 것이다. -->
+After removing all unnecessary parts of sprx's program header, it will be changed as follows.
 
 ```python
 LOAD           0x0000000000000000 0x0000000000000000 0x0000000000000000
@@ -337,22 +379,29 @@ LOAD           0x0000000000000000 0x0000000000000000 0x0000000000000000
 ....
 ```
 
-추가한 부분은 
+<!-- 추가한 부분은  -->
+The part we added is below.
 
 ```python
 LOAD           0x0000000000000000 0x0000000000000000 0x0000000000000000
                  0x0000000000003ff0 0x0000000000003ff0  RW     0x1000
 ```
 
-이 부분이다. 위 세그먼트는 elf header를 메모리에 로딩하기 위해 추가한 세그먼트다. 기존 세그먼트들 위에 새로운 세그먼트를 추가한 것이므로 파일 `offset, virtual/physical address`에 각각 해당 크기만큼을 더해줘야한다.
+<!-- 위 세그먼트는 elf header를 메모리에 로딩하기 위해 추가한 세그먼트다. 기존 세그먼트들 위에 새로운 세그먼트를 추가한 것이므로 파일 `offset, virtual/physical address`에 각각 해당 크기만큼을 더해줘야한다.
 
 세그먼트를 추가한 뒤에는 각각 원래 `LOAD` 세그먼트들의 offset + 추가한 세그먼트의 크기에다가 
 
 기존의 세그먼트 컨텐츠를 다 옮겨주면 된다. (코드영역, 문자열 정보 등)
 
-이제 여기서부터 기존의 elf와 다른 부분을 차근차근 고쳐나가면 되는데, 자세한 내용은 후술하면서 같이 언급할 예정이다.
+이제 여기서부터 기존의 elf와 다른 부분을 차근차근 고쳐나가면 되는데, 자세한 내용은 후술하면서 같이 언급할 예정이다. -->
 
-### 3.6. CRAFT DYNAMIC ENTRIES
+The segment above is added to load the elf header into memory. Since a new segment is added on top of existing segments, the corresponding size must be added to the file `offset, virtual/physical address`.
+
+After adding segments, we changed the virtual address and physical address by adding the size of added segment to the offset of original `LOAD` segment respectively.
+
+From hear on, it is enough to fix the parts that are different from the existing elf step by step, and details will be mentioned later.
+
+### 3.6. Craft Dynamic Entries
 
 ```python
 LOAD:0000000000228410                 Elf64_Dyn <5, 2000h>    ; DT_STRTAB
@@ -367,11 +416,12 @@ LOAD:0000000000228490                 Elf64_Dyn <8, 818h>     ; DT_RELASZ
 LOAD:00000000002284A0                 Elf64_Dyn <0>           ; DT_NULL
 ```
 
-DYNAMIC 엔트리에서 필요한 정보들을 저장할 오프셋들을 미리 지정해둔 뒤에 해당 테이블을 옮겨오거나 새로 생성할 것이다. 
+<!-- DYNAMIC 엔트리에서 필요한 정보들을 저장할 오프셋들을 미리 지정해둔 뒤에 해당 테이블을 옮겨오거나 새로 생성할 것이다.  -->
+After specifying the offsets to store necessary information in the DYNAMIC entry, the table will be moved or created.
 
 ### 3.7. Creating DT_STRTAB
 
-일반적으로 ELF에서는 심볼 테이블에서 함수 이름이 위치한 string table의 인덱스를 가지고 있지만 
+<!-- 일반적으로 ELF에서는 심볼 테이블에서 함수 이름이 위치한 string table의 인덱스를 가지고 있지만 
 
 sprx에서는 함수 이름을 가진 테이블 대신에 함수 고유의 코드인 `nid` 를 가진 table이 존재한다. 
 
@@ -383,7 +433,13 @@ sprx에서는 함수 이름을 가진 테이블 대신에 함수 고유의 코�
 
 이 데이터베이스를 이용하여 함수 문자열을 얻어낸 다음 함수 스트링 테이블을 만들어주면 될 것이다. 그런데 이 스트링 테이블을 위한 세그먼트의 공간이 충분하지 않다면 직접 세그먼트를 추가해주면 된다. 
 
-그리고 해당 문자열의 크기만큼 `DT_STRSZ` 을 설정해주면 된다.
+그리고 해당 문자열의 크기만큼 `DT_STRSZ` 을 설정해주면 된다. -->
+
+Generally, ELF has the index of string table where the function name is located in the symbol table, but in sprx, instead of the table with the function name, thers is a table with `nid`, which is a function specific code. Symbol table uses the index of this nid table.
+
+More information is [here](https://blog.madnation.net/ps4-nid-resolver-ida-plugin/).
+
+Although not all, there is a database of what functions each nid refers to, so we can use this database to get a function string and then create a function string table. However, if there is not enough space for the segment for this string table, add the segment yourself.
 
 #### 3.7.1. Creating DT_SYM
 
@@ -399,13 +455,18 @@ SCE_DYNLIBDATA:00000000010292C8                 Symbol <290h, 12h, 0, 3, 47B0h, 
 SCE_DYNLIBDATA:00000000010292E0                 Symbol <2A0h, 12h, 0, 3, 4730h, 8> ; _ZN3sce3Xml11InitializerC1Ev | Global : Function
 ```
 
-sym table의 첫번째 필드값은 nid table에서 각각 함수들이 대응하는 nid의 오프셋을 가지고 있다.
+<!-- sym table의 첫번째 필드값은 nid table에서 각각 함수들이 대응하는 nid의 오프셋을 가지고 있다.
 
 4번째 필드값은 해당 함수가 위치한 섹션의 인덱스값이다. 나중에 .text섹션을 생성한뒤에 
 
 .text섹션이 몇번째에 위치해있는지를 적어주면 된다. 
 
-대략 어떻게 바뀌는지를 보여주면 다음과 같다.
+대략 어떻게 바뀌는지를 보여주면 다음과 같다. -->
+
+The first field value of the sym table has an offset of the nid corresponding to each function in the nid table.
+And the fourth field value is the index value of the section where the function is located. After creating `.text` section later, let's specify where this section is located.
+
+Here's how it changes roughly.
 
 ```python
 LOAD:0000000000024820                 Elf64_Sym <offset aZn3sce3xml10si - offset unk_2000, 12h, 0, 3, \ ; "_ZN3sce3Xml10SimpleDataC1EPKcm" ...
@@ -429,10 +490,15 @@ LOAD:00000000000248C8                            offset _ZN3sce3Xml11Initializer
 
 ### 3.8. Creating relocation table
 
-relocation table은 그대로 copy해오면 되는데, 몇가지 유의할 점이 있다.
+<!-- relocation table은 그대로 copy해오면 되는데, 몇가지 유의할 점이 있다.
 
 - 세그먼트를 새로 추가해주었으므로  `offset` 값과 `addend` 값에 새로 추가해준 세그먼트 값을 더해줘야 할 뿐만 아니라, 해당 offset에 위치한 포인터에 대해서도 값을 더해줘야 한다.
-- 함수 포인터의 경우 sprx에서는 심볼 테이블과 같은 형태 비슷한 형태로 info를 나타내고 있는데 이 경우 다른 relocation 값들과 같이 구성해주면 된다.
+- 함수 포인터의 경우 sprx에서는 심볼 테이블과 같은 형태 비슷한 형태로 info를 나타내고 있는데 이 경우 다른 relocation 값들과 같이 구성해주면 된다. -->
+
+You can copy the relocation table as it is, but there are a few things to note.
+
+- Since the segment has been newly added, not only the newly added segment value must be added to the `offset` and `addend` value, but also the value for the pointer located at the corresponding offset must be added.
+- In the case of function pointer, sprx displays info in a form similar to the symbol table. In this case, it can be configured with other relocation values.
 
 ```python
 SCE_DYNLIBDATA:000000000102AAB0                 Relocation <offset sce::Xml::MemAllocator::~MemAllocator(), \ ; R_X86_64_64
@@ -443,9 +509,9 @@ SCE_DYNLIBDATA:000000000102AAB0                             2A00000001h, 0>
 LOAD:0000000000026170                 Elf64_Rela <28068h, 8, 1C357h> ; R_X86_64_RELATIVE +1C357h
 ```
 
-### 3.9. CREATING SECTION HEADER
+### 3.9. Creating Section Header
 
-섹션 헤더를 만드는 부분은 그냥 일반적인 elf 포맷에 대한 이해도만 있으면 된다.
+<!-- 섹션 헤더를 만드는 부분은 그냥 일반적인 elf 포맷에 대한 이해도만 있으면 된다.
 
 원래 sprx 포맷에서는 섹션 헤더를 사용하지 않는데, 리눅스에서 dlopen으로 메모리에 로딩되기 위해서는 몇몇 필수적인 섹션들이 있다. 이는 몇가지 테스트를 통해 알아낸 내용이다.
 
@@ -463,7 +529,21 @@ LOAD:0000000000026170                 Elf64_Rela <28068h, 8, 1C357h> ; R_X86_64_
 
 `.dynsym` 또한 똑같다. 필드값에 이전에 생성했었던 symbol table의 entry size, 주소, 오프셋, 사이즈등을 적어주면 된다.
 
-sprx에서 코드 영역은 항상 첫번째 세그먼트( 헤더가 로딩되지 않으므로 항상 첫번째 세그먼트에 코드가 위치한다고 생각해도 된다.)에 있으므로 .text 섹션에는 해당 세그먼트의 정보들을 옮겨주면 될 것이다.(offset, address, 권한, type등등)
+sprx에서 코드 영역은 항상 첫번째 세그먼트( 헤더가 로딩되지 않으므로 항상 첫번째 세그먼트에 코드가 위치한다고 생각해도 된다.)에 있으므로 .text 섹션에는 해당 세그먼트의 정보들을 옮겨주면 될 것이다.(offset, address, 권한, type등등) -->
+
+The part of creating the section header just needs to understand the general elf format.
+
+The original sprx format does not use section headers, but there are some essential sections required to be loaded into memory with dlopen in Linux. This is what we found out through several tests.
+
+It's easy to write down the information in the section.
+
+To mark the section name, you can save section name in a free space(not much space is required), and put the saved information in the `.shstrndx` section heade. And you can write the position of `.shstrndx` in `Section header string table index` of elf header.
+
+In `.dynamic`, you can write the information of dynamic entries(created above). Enter the entry size, address, offset, size, etc. in the field value.
+
+The same is true for `.dynsym`. In the field value, write the entry size, address, offset, size, etc. of the previously created symbol table.
+
+In sprx, the code section is always in the first segment(the header is not loaded, so you can think that the code is always in the first segment), so you just need to move the information of that segment to the `.text` section. (offset, address, authority, type, etc.)
 
 ```python
 [Nr] Name              Type             Address           Offset
@@ -481,7 +561,7 @@ sprx에서 코드 영역은 항상 첫번째 세그먼트( 헤더가 로딩되�
   [ 5] .text             PROGBITS         0000000000004000  00004000
        000000000001ebf0  0000000000000000  AX       0     0     16
 ```
-### 3.10. so 파일로 변환된 라이브러리 테스트
+### 3.10. Testing the library converted to so file
 ```c
 #include <stdio.h>
 #include <dlfcn.h>
@@ -498,40 +578,52 @@ int main(){
     return 0;
 }
 ```
-위 소스코드를 사용하여 함수가 잘 실행되는지 테스트해볼 것이다.
-![image](https://user-images.githubusercontent.com/39231485/101734324-70e61680-3b03-11eb-8315-cca6132f0dfe.png)<br>
-dlsym이 작동하지 않아서 이 함수의 오프셋을 넣고 함수 포인터를 호출시켰다.
-```
- ► 0x7ffff7b978c0 <sceKernelGetCompiledSdkVersion+22720>    mov    rdi, qword ptr [rdi]
-   0x7ffff7b978c3 <sceKernelGetCompiledSdkVersion+22723>    test   rdi, rdi
-   0x7ffff7b978c6 <sceKernelGetCompiledSdkVersion+22726>    je     sceKernelGetCompiledSdkVersion+22733 <sceKernelGetCompiledSdkVersion+22733>
-    ↓
-   0x7ffff7b978cd <sceKernelGetCompiledSdkVersion+22733>    ret  
-```
-해당 함수가 잘 호출 된 것을 확인할 수 있다. 그러므로 만약 퍼징을 돌린다고 하였을 때, 특정 함수에 여러 값들을 넣어보며 테스트 하는 것이 가능하다.
+<!-- 위 소스코드를 사용하여 함수가 잘 실행되는지 테스트해볼 것이다. -->
+Using the above source code, we tested whether the function works well.
 
-## 4. 스크립트
+![image](https://user-images.githubusercontent.com/39231485/101734324-70e61680-3b03-11eb-8315-cca6132f0dfe.png)
+
+<!-- dlsym이 작동하지 않아서 이 함수의 오프셋을 넣고 함수 포인터를 호출시켰다. -->
+Since dlsym didn't work, we put the offset of this function and called the function pointer.
+
 ```
-추후 넣을 계획
+ ► 0x7ffff7b978c0 <sce::Xml::Dom::NodeList::clear()>       mov    rdi, qword ptr [rdi]
+   0x7ffff7b978c3 <sce::Xml::Dom::NodeList::clear()+3>     test   rdi, rdi
+   0x7ffff7b978c6 <sce::Xml::Dom::NodeList::clear()+6>     je     sce::Xml::Dom::NodeList::clear()+13 <sce::Xml::Dom::NodeList::clear()+13>
+    ↓
+   0x7ffff7b978cd <sce::Xml::Dom::NodeList::clear()+13>    ret
 ```
-### 4.1. 한계점
-plt와 got가 연결되어있지 않기 때문에, 다른 라이브러리에서 import 하여 사용하는 함수는 실행시킬 수 없다.<br>
-dlsym이 안된다. - 이유는 추후에 작성
+<!-- 해당 함수가 잘 호출 된 것을 확인할 수 있다. 그러므로 만약 퍼징을 돌린다고 하였을 때, 특정 함수에 여러 값들을 넣어보며 테스트 하는 것이 가능하다. -->
+
+As a result, it was confired that the function was called well. Therefore, if fuzzing, it is possible to test by putting various values in specific function.
+
+## 4. Script
+```
+put in later ...
+```
+### 4.1. Limit
+<!-- plt와 got가 연결되어있지 않기 때문에, 다른 라이브러리에서 import 하여 사용하는 함수는 실행시킬 수 없다.<br>
+만약 퍼징을 돌리려는 함수 안에 외부 라이브러리의 함수가 사용된다면 자체적으로 연결시켜줘야함<br>
+dlsym이 안된다. - 심볼 테이블에 무슨 문제가 있는듯 -->
+
+Because plt and got are not connected, functions imported and used from other libraries can't be executed. If a specific function from external library is used in the function to be fuzzed, it must be linked.
+
+And dlsym does not work. - There seem to be something wrong with the symbol table.
 
 ---
 
 ### Contents <!-- omit in toc -->
 [Main](https://github.com/Hacker-s-PlayStation/PlayStation4-Hacking-Guideline-ENG/blob/main/README.md)<br>
 
-#### Introduction
+#### Introduction <!-- omit in toc -->
 [1. Jailbreak](https://github.com/Hacker-s-PlayStation/PlayStation4-Hacking-Guideline-ENG/blob/main/1_introduction/Jailbreak.md)<br>
 [2. PS4 Open Source](https://github.com/Hacker-s-PlayStation/PlayStation4-Hacking-Guideline-ENG/blob/main/1_introduction/PS4_Open_Source.md)<br>
 [3. Tools](https://github.com/Hacker-s-PlayStation/PlayStation4-Hacking-Guideline-ENG/blob/main/1_introduction/Tools.md)<br>
 
-#### Methodology
+#### Methodology <!-- omit in toc -->
 [1. WebKit](https://github.com/Hacker-s-PlayStation/PlayStation4-Hacking-Guideline-ENG/blob/main/2_methodology/WebKit.md)<br>
 [2. Hardware](https://github.com/Hacker-s-PlayStation/PlayStation4-Hacking-Guideline-ENG/blob/main/2_methodology/Hardware.md)<br>
 [3. Library](https://github.com/Hacker-s-PlayStation/PlayStation4-Hacking-Guideline-ENG/blob/main/2_methodology/Library.md)<br>
 
-#### Conclusion
+#### Conclusion <!-- omit in toc -->
 [Conclusion](https://github.com/Hacker-s-PlayStation/PlayStation4-Hacking-Guideline-ENG/blob/main/3_conclusion/Conclusion.md)
