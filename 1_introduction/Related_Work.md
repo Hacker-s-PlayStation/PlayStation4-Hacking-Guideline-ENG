@@ -17,9 +17,9 @@ CTurt는 웹킷 취약점 과 Kernel 취약점 모두 우리가 채택한 방법
 CTurt가 작성한 글은 상당히 오래전에 작성된 것이긴 하지만 PS4 exploit을 처음 접하는 사람들에게는 좋은 글이니 읽어보는 것을 추천한다. -->
 This is a document written by Cturt<sup id="head1">[1](#foot1)</sup>. It was the first attempt to port the WebKit vulnerability to PS4, and in this article, Full Chain Exploit from WebKit exploit to Kernel Exploit was described in detail.
 
-Cturt ported 1-day to PS4 proceeded with the methodology we adopted for both WebKit and Kernel vulnerability. If there is any difference from Cturt, we aimed to exploit the latest version firmware through 1-day, but CTurt proceeded with the old version firmware. In the case of WebKit, he ported a  heap buffer overflow vulnerability patched in 2012 to PS4 and attempted to exploit it. And for the kernel exploit, the BadIRET vulnerability in Linux patched in 2014 was used.
+Like the methodology we adopted, CTurt ported 1-day to PS4 for both WebKit and Kernel. If there is any difference from Cturt, we aimed to exploit the latest version firmware through 1-day, but CTurt proceeded with the old version firmware. In the case of WebKit, he ported a heap buffer overflow vulnerability patched in 2012 to PS4 and attempted to exploit it. And for the kernel exploit, the BadIRET vulnerability in Linux patched in 2014 was used.
 
-As such, since there were parts that were not patched in PS4 in the past, we adopted a methodology to exploit PS4 by finding 1-day. In this process, we found UAF 1-day vulnerability that pc control is possible in the 8.01 firmware as of 2020-12-12.
+As such, there were cases in which past vulnerabilities were not patched on PS4, so we adopted a methodology to exploit PS4 by finding 1-day. In this process, we found UAF 1-day vulnerability that pc control is possible in the 8.01 firmware as of 2020-12-12.
 
 Altough CTrut's article was written quite a long time ago, it is a good article for those new to PS4 exploits, so we recommend reading it.
 
@@ -50,12 +50,12 @@ Also, the ValidationMessage instance and surrounding objects are freed. Then, th
 
 And by leaking the address of the `JSArrayBufferView` object, damage the length field of the corresponding address and set the R/W primitive. Then, the Arbitrary R/W is activated by corrupting the data buffer reference field of the `JSArrayBufferView` object. Now, overwrite the vtable to point to the controlled pointer of `HTMLTextAreaElement`, and execute ROP and JOP by calling crafted address.
 
-This exploit can be founc in [Synacktiv's Github repository] (https://github.com/synacktiv/PS4-webkit-exploit-6.XX). It succeeded in version 6.xx, but did not get good results in version 7.xx for the reasons mentioned above.
+This exploit can be found in [Synacktiv's Github repository] (https://github.com/synacktiv/PS4-webkit-exploit-6.XX). It succeeded in version 6.xx, but did not get good results in version 7.xx for the reasons mentioned above.
 
 ### 2.2 Differences
 <!-- 우리의 프로젝트는 1-Day 취약점 탐색을 목표로 진행하였지만, Black Hat 에서 발표된 내용은 0-Day 를 연구해서 exploit을 진행하였다. 또한 본 문서에서는 환경구성을 할때 freeBSD 내부에다가 PS4 Webkit을 구축하여 최대한 PS4와 유사한 환경에서 분석을 진행했지만, 본 프로젝트는 PS4 Webkit의 ChangeLog를 이용해서 fork를 진행한 시점을  유추하여 checkout 한 후, 1-day 테스트를 진행하였다. -->
 
-Our project was aimed at 1-day vulnerability discovery, but the content published by Black Hat conducted the exploit by researching 0-day.
+Our project was aimed at 1-day vulnerability discovery, but the content published by Black Hat conducted the exploit by researching 0-day. In addition, in this document, ths PS4 WebKit was build inside FreeBSD and analyzed in an environment similar to PS4. But this project used the ChangeLog of the PS4 WebKit to infer the time of forking and conducted 1-day test in that environment.
 
 ## 3. Reference
 <b id="foot1">[[1](#head1)]</b> [Hacking the PS4](https://cturt.github.io/ps4.html)<br>
