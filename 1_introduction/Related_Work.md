@@ -21,7 +21,7 @@ Like the methodology we adopted, CTurt ported 1-day to PS4 for both WebKit and K
 
 As such, there were cases in which past vulnerabilities were not patched on PS4, so we adopted a methodology to exploit PS4 by finding 1-day. In this process, we found UAF 1-day vulnerability that pc control is possible in the 8.01 firmware as of 2020-12-12.
 
-Altough CTrut's article was written quite a long time ago, it is a good article for those new to PS4 exploits, so we recommend reading it.
+Although CTrut's article was written quite a long time ago, it is a good article for those new to PS4 exploits, so we recommend reading it.
 
 ## 2. THIS IS FOR THE PWNERS: EXPLOITING A WEBKIT 0-DAY IN PLAYSTATION 4
 ### 2.1. Summary
@@ -55,7 +55,7 @@ This exploit can be found in [Synacktiv's Github repository] (https://github.com
 ### 2.2 Differences
 <!-- 우리의 프로젝트는 1-Day 취약점 탐색을 목표로 진행하였지만, Black Hat 에서 발표된 내용은 0-Day 를 연구해서 exploit을 진행하였다. 또한 본 문서에서는 환경구성을 할때 freeBSD 내부에다가 PS4 Webkit을 구축하여 최대한 PS4와 유사한 환경에서 분석을 진행했지만, 본 프로젝트는 PS4 Webkit의 ChangeLog를 이용해서 fork를 진행한 시점을  유추하여 checkout 한 후, 1-day 테스트를 진행하였다. -->
 
-Our project was aimed at 1-day vulnerability discovery, but the content published by Black Hat conducted the exploit by researching 0-day. In addition, in this document, ths PS4 WebKit was build inside FreeBSD and analyzed in an environment similar to PS4. But this project used the ChangeLog of the PS4 WebKit to infer the time of forking and conducted 1-day test in that environment.
+There are some differences from us. Our project was aimed at 1-day vulnerability discovery, but the content published by Black Hat conducted the exploit by researching 0-day. In addition, in Black Hat's documentation, ths PS4 WebKit was build inside FreeBSD and analyzed in an environment similar to PS4. But this project used the ChangeLog of the PS4 WebKit to infer the time of forking and conducted 1-day test in that environment.
 
 ## 3. Reference
 <b id="foot1">[[1](#head1)]</b> [Hacking the PS4](https://cturt.github.io/ps4.html)<br>
