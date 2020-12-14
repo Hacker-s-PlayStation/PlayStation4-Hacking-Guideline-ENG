@@ -50,7 +50,7 @@ Also, the ValidationMessage instance and surrounding objects are freed. Then, th
 
 And by leaking the address of the `JSArrayBufferView` object, damage the length field of the corresponding address and set the R/W primitive. Then, the Arbitrary R/W is activated by corrupting the data buffer reference field of the `JSArrayBufferView` object. Now, overwrite the vtable to point to the controlled pointer of `HTMLTextAreaElement`, and execute ROP and JOP by calling crafted address.
 
-This exploit can be found in [Synacktiv's Github repository] (https://github.com/synacktiv/PS4-webkit-exploit-6.XX). It succeeded in version 6.xx, but did not get good results in version 7.xx for the reasons mentioned above.
+This exploit can be found in [Synacktiv's Github repository](https://github.com/synacktiv/PS4-webkit-exploit-6.XX). It succeeded in version 6.xx, but did not get good results in version 7.xx for the reasons mentioned above.
 
 ### 2.2 Differences
 <!-- 우리의 프로젝트는 1-Day 취약점 탐색을 목표로 진행하였지만, Black Hat 에서 발표된 내용은 0-Day 를 연구해서 exploit을 진행하였다. 또한 본 문서에서는 환경구성을 할때 freeBSD 내부에다가 PS4 Webkit을 구축하여 최대한 PS4와 유사한 환경에서 분석을 진행했지만, 본 프로젝트는 PS4 Webkit의 ChangeLog를 이용해서 fork를 진행한 시점을  유추하여 checkout 한 후, 1-day 테스트를 진행하였다. -->
