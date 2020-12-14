@@ -24,28 +24,28 @@
 ## 1. Overview
 ### 1.1. Uart Log
 <!--Uart Log를 보다가 PS4에서 외부 서버에서 주기적으로 파일을 가져오는 것을 확인했다<br> -->
-Looking at the UART log, We noticed that PS4 periodically requests file from external server.
+Looking at the UART log, we noticed that PS4 periodically requests file from external server.
 ![image](https://user-images.githubusercontent.com/39231485/101589311-86880d00-3a2b-11eb-9906-aafc7b2b666e.png)
 ```
 SERVER_URL={http://ps4-system.sec.np.dl.playstation.net/ps4-system/hid_config/np/v00/hidusbpower.env}
 ```
 <!--서버에서 전달받는 파일은 env파일이다. env파일은 PS4 서버와 기기사이에서 데이터를 주고받는 포맷으로 이에 대한 자세한 정보는 [여기](https://www.psdevwiki.com/ps4/Envelope_Files)에서 확인 가능하다. UART Log에서 출력된 해당 env파일의 처리루틴을 살펴본 결과, env파일의 복호화를 통해 xml파일이 생성되었고, 이를 libxml2 라이브러리에서 처리한다. **따라서 서버로부터 받아오는 env파일을 통신 중간에 임의로 변조하여 공격하는 새로운 시나리오를 생각해냈다. 그리고 이를 확장하여 기존에 WebKit, Freebsd 취약점을 사용하는 Jailbreak와는 다르게 프로세스 안에 있는 라이브러리의 취약점을 사용하는 것을 생각해봤다. 라이브러리 내의 취약점을 찾기 위해서 소스 코드 오디팅, 라이브러리 함수를 대상으로 퍼징을 시도한다.**-->
-The file received from the externel server is a 'env' file. The env file is a format for exchaining data between PS4 server and the device, and more detailed information about this can be found at [here](https://www.psdevwiki.com/ps4/Envelope_Files). As a result of examining the processing routine of the env file in UART log, an XML file was created through the decryption of the env file, and it is processed in the `libxml2` library. Therefore, we came up with a new senario where the env file received from the server is arbitrarily altered and attacked in the middle of communication. And by extending this, we considered using vulnerability of the library in the process, unline Jailbreak, which uses the existing WebKit and FreeBSD vulnerabilities. To find vulnerability in the library, we will try to audit the source code and fuzz to the library functions.
+The file received from the externel server is a 'env' file. The env file is a format for exchaining data between PS4 server and the device, and more detailed information about this can be found at [here](https://www.psdevwiki.com/ps4/Envelope_Files). As a result of examining the processing routine of the env file in UART log, we found that an XML file was created through the decryption of the env file, and it was processed in the `libxml2` library. Therefore, we came up with a new senario in which the env file received from the server is arbitrarily altered and attacks in the middle of communication. And by extending this, we considered using vulnerability of the library in the process, unlike Jailbreak, which uses the existing WebKit and FreeBSD vulnerabilities. To find vulnerability in the library, we will try to audit the source code and fuzz to the library functions.
 
 ### 1.2. File Decryption
 <!-- PS4 안의 파일들은 모두 암호화가 되어있기 때문에 복호화를 진행해야 한다. 복호화된 내용물을 모아둔 [사이트](https://darthsternie.net/ps4-decrypted-firmwares/)가 존재하여 이를 이용했다. 아쉽게도 2020년 12월 기준, 가장 최신 버전은 8.01이지만, 위 사이트에는 7.00버전까지 존재했고, 7.00버전을 분석했다.<br> -->
-Since all files in PS4 are encrypted, decryption is required. There is a [Site](https://darthsternie.net/ps4-decrypted-firmwares/) that collects decrypted contents, so we used it. Unfortunately, as of December 2020, the latest firmware version is 8.01, but there were up to 7.00 version on the above site, and we analyzed the 7.00 version.
+Since all files in PS4 are encrypted, decryption is required. There is a [Site](https://darthsternie.net/ps4-decrypted-firmwares/) that collects decrypted contents, and we used it. Unfortunately, as of December 2020, the latest firmware version is 8.01, but there were up to 7.00 version on the above site, so we analyzed the 7.00 version.
 
 ## 2. Prepare Source Code Auditing
 ### 2.1. Restore Library Function Symbol
 <!--복호화된 sprx를 아이다로 열었을 때, 심볼은 존재하지 않는다.<br>-->
-When the decoded sprx file is opened with IDA, the symbol does not exist.
+When the decoded sprx file was opened with IDA, the symbol did not exist.
 
 ![image](https://user-images.githubusercontent.com/39231485/101623622-0f1ea180-3a5c-11eb-8f63-9687c8a3624d.png)
 
 <!--하지만 심볼 대신 NID라는 것을 통하여 함수 주소와 매치시키는데, 만약 특정 NID가 어떤 함수명인지 안다면 심볼을 복구 할 수 있을 것이다.<br>
 NID와 함수명을 매치한 약 38000개의 데이터를 모아놓고, 이를 매칭시켜주는 아이다 플러그인을 만든 [사이트](https://github.com/SocraticBliss/ps4_module_loader)가 존재한다. 해당 플러그인을 사용하면 많은 함수들의 심볼들을 구할 수 있다.<br>-->
-Howerver, it matches the function address through the NID instead of the symbol. If we know what function name a specific NID is, we can recover the symbol.
+Howerver, it is possible to match the function address through the NID instead of the symbol. If we know what function name a specific NID is, we can recover the symbol.
 There is a [site](https://github.com/SocraticBliss/ps4_module_loader) that IDA plug-in that collects about 38,000 data and matches them. We can get the symbols of many functions by using this plug-in.
 
 ![image](https://user-images.githubusercontent.com/39231485/101710935-d9b69a00-3ad5-11eb-9326-ff45cc95335b.png)<br>
@@ -62,7 +62,7 @@ When fuzzing, the method of modulating the env file using the MITM technique and
 
 ### 3.3. Encrypt / Decrypt env
 <!-- 변조된 xml데이터를 전달하기 위해서는, env파일 암복호화를 임의로 할 수 있도록 해야한다. [여기](https://github.com/SocraticBliss/ps4_env_decryptor)에서 env파일 복호화 코드를 구할 수 있다. 우리는 이를 참고하여 아래와같이 env파일 암호화 코드를 구현했다. -->
-To deliver the altered xml data, the env file must be encrypted and decrypted arbitrarily. [Here](https://github.com/SocraticBliss/ps4_env_decryptor), you can get the code for decrypting the env file. We referred to this and implemented the code for encrypting the env file as follow.
+To deliver the altered xml data, the env file must be able to be encrypted and decrypted arbitrarily. [Here](https://github.com/SocraticBliss/ps4_env_decryptor), you can get the code for decrypting the env file. We referred to this and implemented the code for encrypting the env file as follow.
 
 ```python
 from binascii import unhexlify as uhx, hexlify as hx
@@ -281,7 +281,7 @@ Let's list the fields and values to be changed in pairs.
     - Field that identifies the target OS ABI
     - It changes the value set in `UNIX FreeBSD` to `0x00(System V)`
 - `TYPE`
-    - Filed that specify the file type
+    - Field that specify the file type
     - In `sprx`, the value for classifying files is slightly different, but don't have to worry about it. Our goal is to convert the `sprx` file into the `so` file, so we just need to set the field value to `3(shared object file)`.
 - `Entry point`
     - For the `so` file, we set it to `0`.
@@ -289,9 +289,9 @@ Let's list the fields and values to be changed in pairs.
     - Offset that should be set after adding the section header later.
     - Strangely, `sprx` didn't use section header, but we need to add some sections so that other program can load them.
 - `Number of program headers`
-    - Number of program headers. Just adjust it by number we add or subtract.
+    - Just adjust it as much as we add or subtract it.
 - `Number of section headers`
-    - Number of section headers. Just increase it later as much as we add it.
+    - Just increase it as much as we add it later.
 
 ### 3.5. Craft Program Header
 
@@ -360,7 +360,7 @@ Program Headers:
 ```
 
 <!-- sprx의 프로그램 헤더를 불필요한 부분을 전부 제거한 뒤에 다음과 같이 바꿀 것이다. -->
-After removing all unnecessary parts of sprx's program header, it will be changed as follows.
+After removing all unnecessary parts of sprx's program header, change it as follow.
 
 ```python
 LOAD           0x0000000000000000 0x0000000000000000 0x0000000000000000
@@ -399,7 +399,7 @@ The segment above is added to load the elf header into memory. Since a new segme
 
 After adding segments, we changed the virtual address and physical address by adding the size of added segment to the offset of original `LOAD` segment respectively.
 
-From hear on, it is enough to fix the parts that are different from the existing elf step by step, and details will be mentioned later.
+From here on, it is enough to fix the parts that are different from the existing `elf` step by step, and details will be mentioned later.
 
 ### 3.6. Craft Dynamic Entries
 
@@ -435,11 +435,11 @@ sprx에서는 함수 이름을 가진 테이블 대신에 함수 고유의 코�
 
 그리고 해당 문자열의 크기만큼 `DT_STRSZ` 을 설정해주면 된다. -->
 
-Generally, ELF has the index of string table where the function name is located in the symbol table, but in sprx, instead of the table with the function name, thers is a table with `nid`, which is a function specific code. Symbol table uses the index of this nid table.
+Generally, ELF has the index of string table where the function name is located in the symbol table, but in sprx, instead of the table with the function name, there is a table with `nid`, which is a function specific code. Symbol table uses the index of this nid table.
 
 More information is [here](https://blog.madnation.net/ps4-nid-resolver-ida-plugin/).
 
-Although not all, there is a database of what functions each nid refers to, so we can use this database to get a function string and then create a function string table. However, if there is not enough space for the segment for this string table, add the segment yourself.
+Although not all, there is a database of what functions each nid refers to, so we can use this database to get a function string and then create a function string table. However, if there is not enough space for the segment for this string table, add the segment yourself. And, you can set `DT_STRSZ` as much as the size of the string.
 
 #### 3.7.1. Creating DT_SYM
 
@@ -539,6 +539,10 @@ It's easy to write down the information in the section.
 
 To mark the section name, you can save section name in a free space(not much space is required), and put the saved information in the `.shstrndx` section heade. And you can write the position of `.shstrndx` in `Section header string table index` of elf header.
 
+Howerver, here `.dynstr` must come before `.shstrndx`.
+
+`.dynstr` is a section where strings for dynamic symbols are stored. That is, the name of the function or global variable, and sometimes the name of the library are written there. In the field value, write the string table address, offset, size, etc. create above.
+
 In `.dynamic`, you can write the information of dynamic entries(created above). Enter the entry size, address, offset, size, etc. in the field value.
 
 The same is true for `.dynsym`. In the field value, write the entry size, address, offset, size, etc. of the previously created symbol table.
@@ -619,6 +623,7 @@ And dlsym does not work. - There seem to be something wrong with the symbol tabl
 [1. Jailbreak](https://github.com/Hacker-s-PlayStation/PlayStation4-Hacking-Guideline-ENG/blob/main/1_introduction/Jailbreak.md)<br>
 [2. PS4 Open Source](https://github.com/Hacker-s-PlayStation/PlayStation4-Hacking-Guideline-ENG/blob/main/1_introduction/PS4_Open_Source.md)<br>
 [3. Tools](https://github.com/Hacker-s-PlayStation/PlayStation4-Hacking-Guideline-ENG/blob/main/1_introduction/Tools.md)<br>
+[4. Related Work](https://github.com/Hacker-s-PlayStation/PlayStation4-Hacking-Guideline-ENG/blob/main/1_introduction/Related_Work.md)<br>
 
 #### Methodology <!-- omit in toc -->
 [1. WebKit](https://github.com/Hacker-s-PlayStation/PlayStation4-Hacking-Guideline-ENG/blob/main/2_methodology/WebKit.md)<br>
