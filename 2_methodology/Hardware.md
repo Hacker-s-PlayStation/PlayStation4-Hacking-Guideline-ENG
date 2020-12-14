@@ -1,27 +1,27 @@
 ### Page Contents <!-- omit in toc -->
 - [1. Hardware Overview](#1-hardware-overview)
 - [2. UART Log](#2-uart-log)
-  - [2.1. Supplies](#21-Supplies)
-  - [2.2. Step 1 - UART Port Location](#22-Step-1---UART-Port-Location)
-  - [2.3. Step 2 - UART Port Soldering](#23-step-2---UART-Port-Soldering)
-  - [2.4. Step 3 - USB to TTL Serial Cable Connection](#24-Step-3---USB-to-TTL-Serial-Cable-Connection)
+  - [2.1. Supplies](#21-supplies)
+  - [2.2. Step 1 - UART Port Location](#22-step-1---uart-port-location)
+  - [2.3. Step 2 - UART Port Soldering](#23-step-2---uart-port-soldering)
+  - [2.4. Step 3 - USB to TTL Serial Cable Connection](#24-step-3---usb-to-ttl-serial-cable-connection)
   - [2.5. Step 4 - UART Log](#25-step-4---uart-log)
-  - [2.6. Result](#26-Result)
-- [3. Syscon Dump](#3-syscon-dump)
-  - [3.1. Supplies](#31-Supplies)
-  - [3.2. Step 1 - Syscon Desoldering](#32-step-1---syscon-Desoldering)
-  - [3.3. Step 2 - Connect Syscon with Teensy 4.0 board](#33-step-2---Connect-Syscon-with-Teensy-40-board)
-  - [3.4. Step 3 - Teensy 4.0 programming](#34-step-3---teensy40-programming)
+  - [2.6. Result](#26-result)
+- [3. syscon dump](#3-syscon-dump)
+  - [3.1. Supplies](#31-supplies)
+  - [3.2. Step 1 - Syscon Desoldering](#32-step-1---syscon-desoldering)
+  - [3.3. Step 2 - Connect Syscon with Teensy 4.0 board](#33-step-2---connect-syscon-with-teensy-40-board)
+  - [3.4. Step 3 - Teensy4.0 programming](#34-step-3---teensy40-programming)
   - [3.5. Step 4 - Syscon Dump](#35-step-4---syscon-dump)
-  - [3.6. Dump Result](#36-dump-Result)
+  - [3.6. Dump Result](#36-dump-result)
 - [4. Sflash Dump](#4-sflash-dump)
-  - [4.1. Step 1 - Connect Sflash with Teensy 2.0 board](#41-step-1---Connect-Sflash-with-Teensy-20-board)
-  - [4.2. Step 2 - NORway Environment Setting](#42-step-2---norway-Environment-Setting)
+  - [4.1. Step 1 - Connect Sflash with Teensy 2.0 board](#41-step-1---connect-sflash-with-teensy-20-board)
+  - [4.2. Step 2 - NORway Environment Setting](#42-step-2---norway-environment-setting)
   - [4.3. Step 3 - Teensy Loader](#43-step-3---teensy-loader)
   - [4.4. Step 4 - SPIway - info](#44-step-4---spiway---info)
   - [4.5. Step 5 - SPIway - dump](#45-step-5---spiway---dump)
-  - [4.6. Dump Result](#46-Dump-Result)
-  - [4.7. Plus](#47-Plus)
+  - [4.6. Dump Result](#46-dump-result)
+  - [4.7. Plus](#47-plus)
 - [5. Reference](#5-reference)
 
 ---
@@ -322,18 +322,20 @@ We can write data to chip as well as dump data. Maybe we can use this write func
 
 
 ---
+
 ### Contents <!-- omit in toc -->
 [Main](https://github.com/Hacker-s-PlayStation/PlayStation4-Hacking-Guideline-ENG/blob/main/README.md)<br>
 
-#### Introduction
+#### Introduction <!-- omit in toc -->
 [1. Jailbreak](https://github.com/Hacker-s-PlayStation/PlayStation4-Hacking-Guideline-ENG/blob/main/1_introduction/Jailbreak.md)<br>
 [2. PS4 Open Source](https://github.com/Hacker-s-PlayStation/PlayStation4-Hacking-Guideline-ENG/blob/main/1_introduction/PS4_Open_Source.md)<br>
 [3. Tools](https://github.com/Hacker-s-PlayStation/PlayStation4-Hacking-Guideline-ENG/blob/main/1_introduction/Tools.md)<br>
+[4. Related Work](https://github.com/Hacker-s-PlayStation/PlayStation4-Hacking-Guideline-ENG/blob/main/1_introduction/Related_Work.md)<br>
 
-#### Methodology
+#### Methodology <!-- omit in toc -->
 [1. WebKit](https://github.com/Hacker-s-PlayStation/PlayStation4-Hacking-Guideline-ENG/blob/main/2_methodology/WebKit.md)<br>
 [2. Hardware](https://github.com/Hacker-s-PlayStation/PlayStation4-Hacking-Guideline-ENG/blob/main/2_methodology/Hardware.md)<br>
 [3. Library](https://github.com/Hacker-s-PlayStation/PlayStation4-Hacking-Guideline-ENG/blob/main/2_methodology/Library.md)<br>
 
-#### Conclusion
+#### Conclusion <!-- omit in toc -->
 [Conclusion](https://github.com/Hacker-s-PlayStation/PlayStation4-Hacking-Guideline-ENG/blob/main/3_conclusion/Conclusion.md)

@@ -26,7 +26,7 @@
     - [4.2.5. Step 5 : 테스트](#425-step-5--테스트)
   - [4.3. 문제점](#43-문제점)
 - [5. 1-day 취약점 분석 방법론](#5-1-day-취약점-분석-방법론)
-  - [5.1. bugs.chromium](#51-bugs.chromium)
+  - [5.1. bugs.chromium](#51-bugschromium)
   - [5.2. exploit-db](#52-exploit-db)
   - [5.3. Bugzilla](#53-bugzilla)
   - [5.4. WebKit regression test](#54-webkit-regression-test)
@@ -477,15 +477,16 @@ Safari에서는 race condition 문제 때문에 지원하지 않기도 하고 DE
 ### Contents <!-- omit in toc -->
 [Main](https://github.com/Hacker-s-PlayStation/PlayStation4-Hacking-Guideline-ENG/blob/main/README.md)<br>
 
-#### Introduction
+#### Introduction <!-- omit in toc -->
 [1. Jailbreak](https://github.com/Hacker-s-PlayStation/PlayStation4-Hacking-Guideline-ENG/blob/main/1_introduction/Jailbreak.md)<br>
 [2. PS4 Open Source](https://github.com/Hacker-s-PlayStation/PlayStation4-Hacking-Guideline-ENG/blob/main/1_introduction/PS4_Open_Source.md)<br>
 [3. Tools](https://github.com/Hacker-s-PlayStation/PlayStation4-Hacking-Guideline-ENG/blob/main/1_introduction/Tools.md)<br>
+[4. Related Work](https://github.com/Hacker-s-PlayStation/PlayStation4-Hacking-Guideline-ENG/blob/main/1_introduction/Related_Work.md)<br>
 
-#### Methodology
+#### Methodology <!-- omit in toc -->
 [1. WebKit](https://github.com/Hacker-s-PlayStation/PlayStation4-Hacking-Guideline-ENG/blob/main/2_methodology/WebKit.md)<br>
 [2. Hardware](https://github.com/Hacker-s-PlayStation/PlayStation4-Hacking-Guideline-ENG/blob/main/2_methodology/Hardware.md)<br>
 [3. Library](https://github.com/Hacker-s-PlayStation/PlayStation4-Hacking-Guideline-ENG/blob/main/2_methodology/Library.md)<br>
 
-#### Conclusion
+#### Conclusion <!-- omit in toc -->
 [Conclusion](https://github.com/Hacker-s-PlayStation/PlayStation4-Hacking-Guideline-ENG/blob/main/3_conclusion/Conclusion.md)
