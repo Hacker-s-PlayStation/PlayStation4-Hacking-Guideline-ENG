@@ -1,5 +1,4 @@
 - [1. Hacking the PS4](#1-hacking-the-ps4)
-  - [1.1. Summary](#11-summary)
 - [2. THIS IS FOR THE PWNERS: EXPLOITING A WEBKIT 0-DAY IN PLAYSTATION 4](#2-this-is-for-the-pwners-exploiting-a-webkit-0-day-in-playstation-4)
   - [2.1. Summary](#21-summary)
   - [2.2 Differences](#22-differences)
@@ -7,7 +6,6 @@
 
 # Related Work <!-- omit in toc -->
 ## 1. Hacking the PS4
-### 1.1. Summary
 <!-- CTurt가 작성<sup id="head1">[1](#foot1)</sup>하였으며, WebKit 취약점을 PS4에 포팅하는 것을 맨 처음 시도하였으며, 해당 글에서는 WebKit exploit 부터 Kernel Exploit까지 Full Chain Exploit한 것을 자세하게 기술하였다. 
 
 CTurt는 웹킷 취약점 과 Kernel 취약점 모두 우리가 채택한 방법론과 같이 1-day를 PS4에 포팅하여 진행하였다. CTurt와 다른 점이 있다면 우리는 1-day를 통해 최신 버전 펌웨어 Exploit하는 것을 목표로 진행하였고 CTurt는 구버전 PS4를 목표로 진행하였다. 웹킷에서는 2012년에 패치된 힙 버퍼 오버플로우 취약점을 PS4에 포팅해서 Exploit하였고, 커널은 2014년에 패치된 Linux에서 발생한 BadIRET 취약점이 FreeBSD에도 똑같이 작용해서 이를 PS4에 포팅하여 Exploit 하였다.
@@ -39,18 +37,13 @@ Although CTrut's article was written quite a long time ago, it is a good article
 
 This is a document related to the PS4 0-day exploit presented at the 2020 Black Hat conference<sup id="head2">[2](#foot2)</sup>.
 
-The vulnerability in this document was discovered by fuzzing. During `ValidationMessage` layout update, the instance could be deleted continuously, and the exploit uses UAF vulnerability that occur in `WebCore::ValidationMessage::buildBubbleTree`. When exploiting, heap spray technique is required. Also, install FreeBSD, download and build WebKit PS4, and build as close as possible to the PS4 environment.
+The vulnerability in this document was discovered by fuzzing. `WebCore::ValidationMessage::buildBubbleTree` function updates layout. Updating layout routine calls user registered JS Handlers. If an user registered JS Handler free the object `ValidationMessage` which is used in `buildBubbleTree` function, Use-After-Free occurs. The document describes the process achiving arbitrary code execution along with operation principle of memory allocator. It describes the process achiving arbitrary decrement primitive, relative read primitive, relative read/write primitive, arbitrary read/write primitive and finally code execution.
 
-In order to use this vulnerability, ASLR bypass is required, and leaking html object was possible due to the [bad_hoist](https://bugs.chromium.org/p/project-zero/issues/detail?id=1665) vulnerability in versions 6.xx and lower.
+In order to use this vulnerability, ASLR bypass or information leak vulnerability is required. and leaking associated addresses was possible due to the [bad_hoist](https://bugs.chromium.org/p/project-zero/issues/detail?id=1665) vulnerability in versions 6.xx and lower. Thus, they exploited 6.72 PS4 WebKit successfully using memory layout information and hard-coding related addresses.
 
-> However, since this only worked in the 6.xx version, brute forcing was attempted to find the address of the object in the 7.xx version.
+> However, since this only works in the 6.xx version and memory layout information of 7.xx version is unknown, they still attempts to find the address of the object in the 7.xx version using bruteforce.
 
-Afterwards, in order to reuse the object, an object of 48 byte size (same as the size of ValidationMessage) is sprayed immediately before and after the target object is allocated.
-Also, the ValidationMessage instance and surrounding objects are freed. Then, the object of the same size as the target object is sprayed onto the heap again.
-
-And by leaking the address of the `JSArrayBufferView` object, damage the length field of the corresponding address and set the R/W primitive. Then, the Arbitrary R/W is activated by corrupting the data buffer reference field of the `JSArrayBufferView` object. Now, overwrite the vtable to point to the controlled pointer of `HTMLTextAreaElement`, and execute ROP and JOP by calling crafted address.
-
-This exploit can be found in [Synacktiv's Github repository](https://github.com/synacktiv/PS4-webkit-exploit-6.XX). It succeeded in version 6.xx, but did not get good results in version 7.xx for the reasons mentioned above.
+This exploit can be found in [Synacktiv's Github repository](https://github.com/synacktiv/PS4-webkit-exploit-6.XX).
 
 ### 2.2 Differences
 <!-- 우리의 프로젝트는 1-Day 취약점 탐색을 목표로 진행하였지만, Black Hat 에서 발표된 내용은 0-Day 를 연구해서 exploit을 진행하였다. 또한 본 문서에서는 환경구성을 할때 freeBSD 내부에다가 PS4 Webkit을 구축하여 최대한 PS4와 유사한 환경에서 분석을 진행했지만, 본 프로젝트는 PS4 Webkit의 ChangeLog를 이용해서 fork를 진행한 시점을  유추하여 checkout 한 후, 1-day 테스트를 진행하였다. -->
