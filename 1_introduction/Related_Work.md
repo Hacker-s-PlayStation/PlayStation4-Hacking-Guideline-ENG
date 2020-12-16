@@ -10,14 +10,14 @@
 
 CTurt는 웹킷 취약점 과 Kernel 취약점 모두 우리가 채택한 방법론과 같이 1-day를 PS4에 포팅하여 진행하였다. CTurt와 다른 점이 있다면 우리는 1-day를 통해 최신 버전 펌웨어 Exploit하는 것을 목표로 진행하였고 CTurt는 구버전 PS4를 목표로 진행하였다. 웹킷에서는 2012년에 패치된 힙 버퍼 오버플로우 취약점을 PS4에 포팅해서 Exploit하였고, 커널은 2014년에 패치된 Linux에서 발생한 BadIRET 취약점이 FreeBSD에도 똑같이 작용해서 이를 PS4에 포팅하여 Exploit 하였다.
 
-이렇듯 과거의 취약점이 PS4에서는 패치되지 않은 부분이 있었기 때문에 우리는 CTurt와 다르게 1-day 취약점을 찾아 PS4를 Exploit하는 방법론을 채택하였다. 이 과정에서 우리는 이미 웹킷에서는 패치된 취약점이지만, 글을 작성하는 시점인 2020-12-12 기준으로 최신 버전인 PS4 8.01 버전 웹킷에서 PC Controll이 가능한 UAF 취약점을 찾아냈다.
+이렇듯 과거의 취약점이 PS4에서는 패치되지 않은 부분이 있었기 때문에 우리는 CTurt와 다르게 1-day 취약점을 찾아 PS4를 Exploit하는 방법론을 채택하였다. 이 과정에서 우리는 이미 웹킷에서는 패치된 취약점이지만, 글을 작성하는 시점인 2020-12-16 기준으로 최신 버전인 PS4 8.03 버전 웹킷에서 PC Controll이 가능한 UAF 취약점을 찾아냈다.
 
 CTurt가 작성한 글은 상당히 오래전에 작성된 것이긴 하지만 PS4 exploit을 처음 접하는 사람들에게는 좋은 글이니 읽어보는 것을 추천한다. -->
 This is a document written by Cturt<sup id="head1">[1](#foot1)</sup>. It was the first attempt to port the WebKit vulnerability to PS4, and in this article, Full Chain Exploit from WebKit exploit to Kernel Exploit was described in detail.
 
 Like the methodology we adopted, CTurt ported 1-day to PS4 for both WebKit and Kernel. If there is any difference from Cturt, we aimed to exploit the latest version firmware through 1-day, but CTurt proceeded with the old version firmware. In the case of WebKit, he ported a heap buffer overflow vulnerability patched in 2012 to PS4 and attempted to exploit it. And for the kernel exploit, the BadIRET vulnerability in Linux patched in 2014 was used.
 
-As such, there were cases in which past vulnerabilities were not patched on PS4, so we adopted a methodology to exploit PS4 by finding 1-day. In this process, we found UAF 1-day vulnerability that pc control is possible in the 8.01 firmware as of 2020-12-12.
+As such, there were cases in which past vulnerabilities were not patched on PS4, so we adopted a methodology to exploit PS4 by finding 1-day. In this process, we found UAF 1-day vulnerability that pc control is possible in the 8.03 firmware as of 2020-12-16.
 
 Although CTrut's article was written quite a long time ago, it is a good article for those new to PS4 exploits, so we recommend reading it.
 

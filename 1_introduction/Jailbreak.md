@@ -16,9 +16,9 @@ Jailbreak란, 프로그램의 취약점을 이용하여 PS4의 높은 권한을 
 Jailbreak refers to previlege escalation on PS4 to remove restrictions and get some blocked features. Generally, jailbreak is done by chaining browser vulnerability and kernel vulnerability. PS4 uses WebKit browser and Orbis OS based on FreeBSD 9.
 
 <!--
-2020년 12월 9일 기준, PS4 펌웨어는 8.01까지 업데이트가 된 상황에서 Jailbreak는 PS4 펌웨어 6.72버전까지 진행이 되었다. sleirsgoevy가 6.72 Jailbreak 도구를 만들었으며 소스코드는 [여기](https://github.com/sleirsgoevy/ps4jb)에서 확인할 수 있다. Jailbreak된 PS4 펌웨어 버전 및 취약점에 대한 자세한 내용은 [PS4 developer wiki](https://www.psdevwiki.com/ps4/Working_Exploits)를 참고하면 된다.
+2020년 12월 16일 기준, PS4 펌웨어는 8.03까지 업데이트가 된 상황에서 Jailbreak는 PS4 펌웨어 6.72버전까지 진행이 되었다. sleirsgoevy가 6.72 Jailbreak 도구를 만들었으며 소스코드는 [여기](https://github.com/sleirsgoevy/ps4jb)에서 확인할 수 있다. Jailbreak된 PS4 펌웨어 버전 및 취약점에 대한 자세한 내용은 [PS4 developer wiki](https://www.psdevwiki.com/ps4/Working_Exploits)를 참고하면 된다.
 -->
-On 9th December 2020, the latest firmware version is 8.01 and jailbreaked highest firmware version is 6.72. Sleirsgoevy made the tool and you can find the source code [here](https://github.com/sleirsgoevy/ps4jb). And you can also get some details about jailbreaked firmware information on [PS4 developer wiki](https://www.psdevwiki.com/ps4/Working_Exploits).
+On 16th December 2020, the latest firmware version is 8.03 and jailbreaked highest firmware version is 6.72. Sleirsgoevy made the tool and you can find the source code [here](https://github.com/sleirsgoevy/ps4jb). And you can also get some details about jailbreaked firmware information on [PS4 developer wiki](https://www.psdevwiki.com/ps4/Working_Exploits).
 
 ### 1.1. Warning
 <!--

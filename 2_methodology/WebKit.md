@@ -653,10 +653,10 @@ It has simple description of bug, address of Bugzilla site, and the test code th
 ![image](https://user-images.githubusercontent.com/45416961/101624881-f911e080-3a5d-11eb-98da-c4ceef700f57.png)
 
 <!--
-그러던 도중 WebCore 엔진에서 pc 레지스터 컨트롤이 가능한 취약점 하나를 발견할 수 있었다. 6.72 버전에서 디버깅을 통해 레지스터 값이 임의의 값으로 변경되는 것을 확인했고, 8.01 버전에서도 레지스터 값을 확인할 순 없었지만 에러 반응이 나타나는 것을 볼 수 있었다. 다만 해당 취약점 하나만으로는 exploit을 할 수 없기에 info leak 취약점을 탐색해야만 했다. 프로젝트 기간 동안 쓸만한 info leak 취약점은 발견하지 못했다. 비록 프로젝트는 끝났지만 Future work로 시도해보면 좋을 것 같다.
+그러던 도중 WebCore 엔진에서 pc 레지스터 컨트롤이 가능한 취약점 하나를 발견할 수 있었다. 6.72 버전에서 디버깅을 통해 레지스터 값이 임의의 값으로 변경되는 것을 확인했고, 8.03 버전에서도 레지스터 값을 확인할 순 없었지만 에러 반응이 나타나는 것을 볼 수 있었다. 다만 해당 취약점 하나만으로는 exploit을 할 수 없기에 info leak 취약점을 탐색해야만 했다. 프로젝트 기간 동안 쓸만한 info leak 취약점은 발견하지 못했다. 비록 프로젝트는 끝났지만 Future work로 시도해보면 좋을 것 같다.
 -->
 
-Finally, we found a vulnerability that can control program counter register. We checked changing rip value into arbitrary value using UART Log on PS4 6.72 version. The vulnerability was not patched in the latest PS4 WebKit source code, thus we checked that PS4 latest version(8.01 version) also crashed. However, this vulnerability just can change pc register value, thus we can not exploit the WebKit without information leak. Unfortunately, we failed to find information leak vulnerability during project term.
+Finally, we found a vulnerability that can control program counter register. We checked changing rip value into arbitrary value using UART Log on PS4 6.72 version. The vulnerability was not patched in the latest PS4 WebKit source code, thus we checked that PS4 latest version(8.03 version) also crashed. However, this vulnerability just can change pc register value, thus we can not exploit the WebKit without information leak. Unfortunately, we failed to find information leak vulnerability during project term.
 
 ## 6. Future Work
 
