@@ -13,11 +13,13 @@
   - [3.6. Craft Dynamic Entries](#36-craft-dynamic-entries)
   - [3.7. Creating DT_STRTAB](#37-creating-dt_strtab)
     - [3.7.1. Creating DT_SYM](#371-creating-dt_sym)
-  - [3.8. Creating relocation table](#38-creating-relocation-table)
+  - [3.8. Creating Relocation Table](#38-creating-relocation-table)
   - [3.9. Creating Section Header](#39-creating-section-header)
-  - [3.10. Testing the library converted to so file](#310-testing-the-library-converted-to-so-file)
+  - [3.10. Testing the Library Converted to so file](#310-testing-the-library-converted-to-so-file)
 - [4. Script](#4-script)
   - [4.1. Limit](#41-limit)
+    - [4.1.1 Imperfect Connection of plt and got](#411-Imperfect-Connection-of-plt-and-got)
+    - [4.1.2 Not Working dlsym](#412-Not-working-dlsym)
 
 ---
 # Library <!-- omit in toc -->
@@ -606,13 +608,183 @@ As a result, it was confired that the function was called well. Therefore, if fu
 put in later ...
 ```
 ### 4.1. Limit
-<!-- plt와 got가 연결되어있지 않기 때문에, 다른 라이브러리에서 import 하여 사용하는 함수는 실행시킬 수 없다.<br>
-만약 퍼징을 돌리려는 함수 안에 외부 라이브러리의 함수가 사용된다면 자체적으로 연결시켜줘야함<br>
-dlsym이 안된다. - 심볼 테이블에 무슨 문제가 있는듯 -->
+#### 4.1.1 Imperfect Connection of plt and got
 
-Because plt and got are not connected, functions imported and used from other libraries can't be executed. If a specific function from external library is used in the function to be fuzzed, it must be linked.
+<!--
+plt와 got가 연결되어있지 않기 때문에, 다른 라이브러리에서 import 하여 사용하는 함수는 실행시킬 수 없다.<br>
+만약 퍼징을 돌리려는 함수 안에 외부 라이브러리의 함수가 사용된다면 자체적으로 연결시켜줘야한다.<br><br>
+우리가 퍼징을 시도할 xml 라이브러리에서는 libc 함수를 import 시키기 때문에 해당 함수들을 프로그랜 내의 plt 주소로 점프 하는 방식을 사용하여 연결시켜주었다.<br>
+우리가 적용한 방법은 아래와 같다.<br>
+1. xml 라이브러리에서 사용되는 libc 함수(ex. free, malloc)를 퍼징할 프로그램에도 호출한다. 이를 통해 프로그램 내에 해당 함수들의 plt, got가 생기게 된다.
+2. dlopen을 한 이후, 프로그램 내부 주소를 라이브러리에 저장한다.
+-->
 
-And dlsym does not work. - There seem to be something wrong with the symbol table.
+Since plt and got are not connected, the functions that imported from another libraries are not executable. If our target function uses external functions, we have to connect it manually. Because XML library, our target library, uses some libc functions, we called the libc functions that need in XML library to make plt of the functions in the main program binary, and connected the plt in main program binary with functions in XML library manually. We describes how we connected them below.
+
+1. Call the libc functions that need in XML library to make plt of the functions in the main program binary.
+2. After open the target library using dlopen, store the address of main program in the target library. We stored address of _start function and this will be used when we find plt in the main binary. We didn't write the address of plt functions directly because the address may change(using PIE or something like that).
+```c
+    handle = dlopen("./xml_library", RTLD_LAZY);
+
+    asm("pushq %rax;"
+    "movq (%rax), %rax;"        // rax has the base address of XML library.
+    "movq %r12, 0x28900(%rax);" // We found that r12 register has _start plt address by debugging. Of course this may be different depending on the case.
+                                // We write the _start address in the XML library. 0x28900 is just an arbitrary offset that point to one of the pending space.
+    "popq %rax;");
+```
+
+<!--
+3. 저장된 프로그램 내부 주소를 사용하여 프로그램 내의 plt 주소로 jmp 해주는 코드를 xml 라이브러리의 text 섹션에 적는다.<br>아래는 위에서 설명한 코드를 xml 라이브러리에서 사용하는 libc 함수 모두에게 만들어주는 코드이다.
+-->
+
+3. We manually modified the XML library binary to insert routines that jump to the plt in main function using _start address value. Below is simple script that makes the routine binary.
+
+```python
+# mov rax, qword ptr [rip + offset]  [rip + offset] has address of _start.
+# sub rax, 0xe0
+# jmp rax
+
+plt_offset_list = []
+function_list = []
+mov = "\x48\x8b\x05"
+mov_offset = 0x5D30-7 # minus 7 because $rip is containing next command's address
+small_sub = "\x48\x83\xE8" # 1byte
+big_sub = "\x48\x2d" # 4byte
+jmp = "\xFF\xE0"
+
+code_offset_list = []
+code_offset = 0
+
+with open("input.txt", "r") as f:
+    for line in f.readlines():
+        plt_offset = line.split()[0]
+        function_list.append(line.split()[1])
+        plt_offset_list.append(int(plt_offset, 16))
+
+with open("result.bin", "w") as f:
+    for plt_offset in plt_offset_list:
+        if plt_offset == 0:
+            code_offset_list.append(-1)
+            continue
+
+        f.write(mov)
+        temp = mov_offset
+        for _ in range(4):
+            f.write(chr(temp%0x100))
+            temp //= 0x100
+
+        code_offset_list.append(code_offset)
+        if plt_offset < 128:
+            code_offset += 13
+            mov_offset -= 13
+            f.write(small_sub)
+            f.write(chr(plt_offset))
+        else:
+            code_offset += 15
+            mov_offset -= 15
+            f.write(big_sub)
+            for _ in range(4):
+                f.write(chr(plt_offset%0x100))
+                plt_offset //= 0x100
+        f.write(jmp)
+
+for i in range(len(function_list)):
+    print(function_list[i] + " " + str(hex(code_offset_list[i])))
+```
+
+<!--
+4. 라이브러리 내에 있는 고장난 plt에 text 섹션에 적은 각각 함수에 맞는 코드들의 주소를 넣어준다.
+-->
+
+4. Modify the broken plt section in the XML library to connect them to our routine described step 3.
+
+```c
+    int arr_code[] = {0,0xf,0x1e,0x2d,0x3a,-1,0x49,0x58,0x67,0x76,0x85,0x94,0xa3,0xb0,0xbf,0xcc,-1,0xdb,0xea,0xf9,0x108,0x115,0x124,0x133,0x142}; // Offset of connecting routines that we inserted.
+    long long target;
+    long long *target_save;
+
+    for(int i = 0;i<23;i++){
+        if(arr_code[i] == -1){
+            continue;
+        }
+        target = (long long)*handle + (long long)arr_code[i] + 0x22bd0; // the location of connecting routines in the library.
+        target_save = (long long *)((long long)*handle + (long long)0x24368 + (8*i)); // the location of broken plt in XML library. 
+        *target_save = target;
+    }
+```
+
+Below is sample code.
+
+```c
+#include <stdio.h>
+#include <dlfcn.h>
+#include <string.h>
+#include <stdlib.h>
+#include <iostream>
+
+int main(int argc, char *argv[]){
+
+    char text[30];
+    const char test[30] = "AAAAAAA";
+
+    if(argv[0]==0){
+        int *a;
+        int* c = new int;
+        delete c;
+        strncpy(text,text,10);
+        memmove(test+15,test+10,11);
+        a = strnlen(text,30);
+        a = strlen(text);
+        a = malloc(30);
+        free(a);
+        a = memcpy(text,test,10);
+        a = memset(text,test,10);
+        a = strcmp(text,test);
+        a = strncmp(text,test,10);
+        a = memcmp(text,test,10);
+        a = fclose(0);
+        FILE* b;
+        b  = fopen(test, test);
+        a = fread(0, 0,0,0);
+        a = fseek(0,0,0);
+        a = ftell(0);
+        rewind(0);
+        a = snprintf(0,0,0);
+    }
+
+    int arr_code[] = {0,0xf,0x1e,0x2d,0x3a,-1,0x49,0x58,0x67,0x76,0x85,0x94,0xa3,0xb0,0xbf,0xcc,-1,0xdb,0xea,0xf9,0x108,0x115,0x124,0x133,0x142};
+    long long target;
+    long long *target_save;
+
+    long long *handle;
+    double *(*func)();
+
+    handle = dlopen("./xml_library", RTLD_LAZY);
+
+    asm("pushq %rax;"
+    "movq (%rax), %rax;"
+    "movq %r12, 0x28900(%rax);"
+    "popq %rax;");
+
+    for(int i = 0;i<23;i++){
+        if(arr_code[i] == -1){
+            continue;
+        }
+        target = (long long)*handle + (long long)arr_code[i] + 0x22bd0;
+        target_save = (long long *)((long long)*handle + (long long)0x24368 + (8*i));
+        *target_save = target;
+    }
+
+    func = (long long)*handle+0x4118; // execute target function
+
+    func();
+    return 0;
+}
+```
+
+#### 4.2.2 Not Working dlsym
+Maybe there are some problems at the symbol table. We called the function using function pointer.
+
 
 ---
 
