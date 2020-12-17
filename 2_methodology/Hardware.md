@@ -315,7 +315,7 @@ dump 뿐만 아니라 write도 가능하다. 실제로 PS4에서 NOR 칩의 일�
 We can write data to chip as well as dump data. Maybe we can use this write function.
 
 ## 5. Reference
-> - [SYSGLITCH_DOWNGRADE (2).pdf](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/37e4d1b3-06ea-4ed1-ab61-ce45f6146c7b/SYSGLITCH_DOWNGRADE_(2).pdf)
+> - [SYSGLITCH_DOWNGRADE (2).pdf](https://gofile.io/d/sCK68r)
 > - [PS4 SysGlitch Tool and SysCon Glitching Pinout by VVildCard777](https://www.psxhax.com/threads/ps4-sysglitch-tool-and-syscon-glitching-pinout-by-vvildcard777.7545/)
 > - [PS4 NOR chip repair that displays signs of a BLOD](https://gbatemp.net/threads/ps4-nor-chip-repair-that-displays-signs-of-a-blod.569955/)
 > - [PS4 Aux Hax 2: Syscon](https://fail0verflow.com/blog/2018/ps4-syscon/)
