@@ -20,7 +20,7 @@
   - [4.1. Limit](#41-limit)
     - [4.1.1 Imperfect Connection of plt and got](#411-Imperfect-Connection-of-plt-and-got)
     - [4.1.2 Not Working dlsym](#412-Not-working-dlsym)
-- [5. Fuzzing (Not completed)](#5-Fuzzing-(not-completed))
+- [5. Fuzzing (Not completed)](#5-Fuzzing-not-completed)
 
 ---
 # Library <!-- omit in toc -->
