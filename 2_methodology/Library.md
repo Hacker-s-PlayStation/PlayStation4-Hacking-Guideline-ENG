@@ -786,7 +786,7 @@ int main(int argc, char *argv[]){
 #### 4.2.2 Not Working dlsym
 Maybe there are some problems at the symbol table, but we failed to figure out. Thus, we called functions using function pointer.
 
-## 5. Fuzzing
+## 5. Fuzzing (Not completed)
 
 <!--
 우리가 구현한 함수를 실행하는 기능을 사용하면 특정 기능에 대한 루틴을 재현하여 해당 부분을 퍼징해볼 수 있다.<br>
