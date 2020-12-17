@@ -20,6 +20,7 @@
   - [4.1. Limit](#41-limit)
     - [4.1.1 Imperfect Connection of plt and got](#411-Imperfect-Connection-of-plt-and-got)
     - [4.1.2 Not Working dlsym](#412-Not-working-dlsym)
+- [5. Fuzzing](#5-Fuzzing)
 
 ---
 # Library <!-- omit in toc -->
@@ -783,8 +784,18 @@ int main(int argc, char *argv[]){
 ```
 
 #### 4.2.2 Not Working dlsym
-Maybe there are some problems at the symbol table. We called the function using function pointer.
+Maybe there are some problems at the symbol table, but we failed to figure out. Thus, we called functions using function pointer.
 
+## 5. Fuzzing
+
+<!--
+우리가 구현한 함수를 실행하는 기능을 사용하면 특정 기능에 대한 루틴을 재현하여 해당 부분을 퍼징해볼 수 있다.<br>
+하지만, 제약사항이 존재한다.<br><br>
+심볼이 완벽하게 복구된게 아니라서 인스턴스 생성이 일반적인 방법으로는 불가능하다. <br>
+그래서 조금 분석해본 결과, 클래스의 크기를 맞춰 동적할당을 한 후, 반환된 주소를 인자로 클래스 생성자 함수에 넣어주면 할 수 있지 않을까 여겨진다.<br>
+-->
+
+We can try fuzzing the target routine reproduced on PC. However, we faced some problems in this step. Even though we managed to call function, the symbol problem remained. If the target function needs some objects that exists in target library where symbol is not fully recovered, it is hard to use object in the usual way. For example, if we want to make an object, we cannot use new operator. Instead, we may have to allocate memory and call constructor function explicitly. There may be more problems due to not fully recovered symbol. We need to think about this problem.
 
 ---
 
