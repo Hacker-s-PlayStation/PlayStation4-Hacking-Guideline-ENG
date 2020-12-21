@@ -59,6 +59,7 @@ There is a [site](https://github.com/SocraticBliss/ps4_module_loader) that IDA p
 
   <!-- * ps4 라이브러리는 소니가 자체적으로 만든 sprx라는 포맷을 사용한다. -->
   - The PS4 library uses a format called `sprx` made by Sony.
+  - You can check the detail of the sprx format on this [website](https://www.psdevwiki.com/ps4/SELF_File_Format)
 ### 3.2. Transform sprx into so
 <!--퍼징을 진행할 때, MITM기법으로 env파일을 변조하여 기기에 전달하는 방식은 속도가 매우 느리고, 콘솔 기기내의 code coverage를 분석하는데도 어려움이 있다. 따라서 xml 처리 루틴을 PC에서 재현한 후에 이를 이용하여 PC상에서 퍼징을 하려고 한다. sprx는 PS4 전용 포맷이기 때문에 이를 PC에서 사용할 수 있도록 하기 위해 elf 포맷으로 변경하는 것을 시도했다.-->
 When fuzzing, the method of modulating the env file using the MITM technique and transmitting it to the device is very slow, and it is difficult to analyze the code coverage in the console device. Therefore, after reproducing the xml processing routine on the PC, we will fuzz on the PC using it. Since sprx is PS4 only format, we tried to transform it into elf format in order to be able to use it on PC.
@@ -605,9 +606,12 @@ Since dlsym didn't work, we put the offset of this function and called the funct
 As a result, it was confired that the function was called well. Therefore, if fuzzing, it is possible to test by putting various values in specific function.
 
 ## 4. Script
-```
-put in later ...
-```
+We made a script that convert sprx file to so file. Even though it makes imperfect elf file, it enables the target file to be loaded on memory using dlopen. After loading the library, we can execute a function by adding offset to base address of the library. Even though there are still many limitations, it will reduce your effort to convert sprx file to so file.
+
+You can check the script [here](https://github.com/Hacker-s-PlayStation/PlayStation4-Hacking-Guideline-ENG/tree/main/2_methodology/sprx_to_so).
+> Usage : download two script files and execute script.py.<br>
+> Command : python3 script.py (sprx library)
+
 ### 4.1. Limit
 #### 4.1.1 Imperfect Connection of plt and got
 
