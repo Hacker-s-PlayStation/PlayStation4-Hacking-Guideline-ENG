@@ -611,6 +611,9 @@ We made a script that convert sprx file to so file. Even though it makes imperfe
 You can check the script [here](https://github.com/Hacker-s-PlayStation/PlayStation4-Hacking-Guideline-ENG/tree/main/2_methodology/sprx_to_so).
 > Usage : download two script files and execute script.py.<br>
 > Command : python3 script.py (sprx library)
+<br>The reference for writing the script is as follows.<br>
+* env file decrypt : https://github.com/SocraticBliss/ps4_env_decryptor
+* ps4 elf loader parsing : https://github.com/SocraticBliss/ps4_module_loader
 
 ### 4.1. Limit
 #### 4.1.1 Imperfect Connection of plt and got
